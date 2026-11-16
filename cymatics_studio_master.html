@@ -1,0 +1,3138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cymatics Studio Master — Fase B (Motor Web Audio API & Atlas Hz)</title>
+  
+  <!-- Dependências: Three.js r128, OrbitControls e Tailwind CSS via CDN confiável -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+    :root {
+      --bg-black: #000000;
+      --card-bg: rgba(10, 10, 16, 0.90);
+      --card-border: rgba(255, 255, 255, 0.09);
+      --gold-accent: #d4af37;
+      --cyan-accent: #00d2ff;
+      --magenta-accent: #ff0055;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-black);
+      color: #e2e8f0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    /* Glass UI Ultra Premium */
+    .glass-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.88);
+    }
+
+    .glass-input {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.2s ease;
+    }
+    .glass-input:hover {
+      border-color: rgba(212, 175, 55, 0.4);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    /* Botões das Mesas */
+    .mesa-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .mesa-pill:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .mesa-pill.active {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(0, 210, 255, 0.15) 100%);
+      border-color: var(--gold-accent);
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.3);
+    }
+
+    /* Assinaturas Clássicas */
+    .sig-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.2s ease;
+    }
+    .sig-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .sig-btn.active {
+      border-color: var(--cyan-accent);
+      background: rgba(0, 210, 255, 0.12);
+      color: var(--cyan-accent);
+    }
+
+    /* Acordeão de Camadas da Sidebar */
+    .drawer-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+    .drawer-trigger:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .drawer-trigger.open {
+      background: rgba(212, 175, 55, 0.1);
+      border-color: rgba(212, 175, 55, 0.35);
+      color: var(--gold-accent);
+    }
+    .drawer-trigger.open .drawer-arrow {
+      transform: rotate(180deg);
+    }
+
+    .drawer-content {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, padding 0.25s ease;
+      padding: 0 4px;
+    }
+    .drawer-content.open {
+      max-height: 520px;
+      opacity: 1;
+      overflow-y: auto;
+      padding: 10px 4px;
+    }
+
+    /* Custom Scrollbar */
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--gold-accent);
+    }
+
+    /* Sliders personalizados */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cyan-accent);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan-accent);
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+      background: var(--gold-accent);
+      box-shadow: 0 0 10px var(--gold-accent);
+    }
+
+    /* Card de luz */
+    .light-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 8px 10px;
+      transition: all 0.2s ease;
+    }
+    .light-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .light-card.selected {
+      border-color: var(--cyan-accent);
+      background: rgba(0, 210, 255, 0.08);
+    }
+
+    /* Color picker minimalista */
+    input[type=color] {
+      -webkit-appearance: none;
+      border: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+      padding: 0;
+    }
+    input[type=color]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    input[type=color]::-webkit-color-swatch {
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+    }
+
+    /* Grid de presets Atlas */
+    .preset-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      padding: 6px 4px;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .preset-pill:hover {
+      background: rgba(212, 175, 55, 0.12);
+      border-color: rgba(212, 175, 55, 0.35);
+      transform: translateY(-1px);
+    }
+    .preset-pill.active {
+      border-color: var(--gold-accent);
+      background: rgba(212, 175, 55, 0.25);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+    }
+
+    /* Tags de categorias do Atlas */
+    .atlas-cat-tag {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      transition: all 0.15s ease;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .atlas-cat-tag:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .atlas-cat-tag.active {
+      background: rgba(0, 210, 255, 0.15);
+      border-color: var(--cyan-accent);
+      color: var(--cyan-accent);
+    }
+
+    /* Item de Playlist */
+    .track-row {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s ease;
+    }
+    .track-row:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .track-row.active {
+      background: rgba(0, 210, 255, 0.12);
+      border-color: var(--cyan-accent);
+    }
+
+    /* Modo Sessão Fullscreen Overlay */
+    #session-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.94);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(30px);
+    }
+  </style>
+</head>
+<body class="w-full h-full">
+
+  <!-- Palco WebGL 3D -->
+  <div id="webgl-canvas"></div>
+
+  <!-- BARRA SUPERIOR COMPACTA (MASTER TOPBAR) -->
+  <header class="fixed top-0 left-0 right-0 h-16 bg-black/90 backdrop-blur-2xl border-b border-white/10 z-50 flex items-center justify-between px-6">
+    
+    <!-- LADO ESQUERDO: Marca & Badge Multifísico -->
+    <div class="flex items-center gap-3 min-w-[230px]">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 via-cyan-400 to-indigo-500 p-[1px] flex items-center justify-center shadow-lg shadow-cyan-500/10">
+        <div class="w-full h-full bg-black rounded-[11px] flex items-center justify-center">
+          <span class="text-sm font-black text-cyan-400">∿</span>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xs font-black tracking-widest text-white uppercase">CYMATICS STUDIO</h1>
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-[#d4af37] font-black border border-amber-500/30">MASTER 3D</span>
+        </div>
+        <p class="text-[8px] text-gray-400 font-mono tracking-wider">FASE B • MOTOR DE ÁUDIO &amp; ATLAS HZ</p>
+      </div>
+    </div>
+
+    <!-- CENTRO: Seletor das 3 Mesas + 4 Assinaturas Clássicas -->
+    <div class="flex items-center gap-3">
+      
+      <!-- SELETOR DAS 3 MESAS (REGRA INEGOCIÁVEL #2) -->
+      <div class="flex items-center p-1 rounded-xl bg-white/5 border border-white/10 gap-1 shadow-inner">
+        <button id="mesa-btn-1" class="mesa-pill active px-3.5 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-wider" onclick="selectMesa('water_pure')">
+          <span class="text-xs">💧</span>
+          <span>1. Água Pura</span>
+        </button>
+        <button id="mesa-btn-2" class="mesa-pill px-3.5 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-wider" onclick="selectMesa('chladni_sand')">
+          <span class="text-xs">⏳</span>
+          <span>2. Chladni</span>
+        </button>
+        <button id="mesa-btn-3" class="mesa-pill px-3.5 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-wider" onclick="selectMesa('fusion_cymatic')">
+          <span class="text-xs">✨</span>
+          <span>3. Fusão Híbrida</span>
+        </button>
+      </div>
+
+      <!-- 4 ASSINATURAS CLÁSSICAS (1-CLIQUE) -->
+      <div class="flex items-center gap-1.5 pl-3 border-l border-white/10">
+        <button class="sig-btn active px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1" onclick="applySignature('sig_cimatic3', this)" title="Cimatic 3: Espelho Negro Puro">
+          <span>🌟</span>
+          <span>Cimatic 3</span>
+        </button>
+        <button class="sig-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1" onclick="applySignature('sig_cimatic4', this)" title="Cimatic 4: Luz Suave Calibrada">
+          <span>🎛️</span>
+          <span>Cimatic 4</span>
+        </button>
+        <button class="sig-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1" onclick="applySignature('sig_cimatic6', this)" title="Cimatic 6: VJ DJ Immersion">
+          <span>🎧</span>
+          <span>Cimatic 6</span>
+        </button>
+        <button class="sig-btn px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1" onclick="applySignature('sig_fluid', this)" title="Água Fluida: Física Pura">
+          <span>💧</span>
+          <span>Água Fluida</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- LADO DIREITO: Câmera, Sessão & Toggle Sidebar -->
+    <div class="flex items-center gap-2 min-w-[220px] justify-end">
+      <!-- Alternar Câmera Topo / 3D -->
+      <button id="btn-camera-toggle" class="glass-input hover:border-cyan-400 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors" onclick="toggleCameraView()">
+        <svg id="cam-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+        <span id="cam-label">Câmera 3D</span>
+      </button>
+
+      <!-- Modo Sessão -->
+      <button class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-[#d4af37] text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors" onclick="startSession()">
+        <span>🧘</span>
+        <span>Sessão</span>
+      </button>
+
+      <!-- Tela Cheia -->
+      <button class="p-2 glass-input hover:border-white/40 rounded-lg text-gray-300 hover:text-white transition-colors" onclick="toggleFullScreen()" title="Tela Cheia">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+      </button>
+
+      <!-- Toggle Sidebar -->
+      <button id="btn-sidebar-toggle" class="p-2 glass-input hover:border-cyan-400 rounded-lg text-cyan-400 transition-colors" onclick="toggleSidebar()" title="Ocultar/Exibir Sidebar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+    </div>
+
+  </header>
+
+  <!-- UMA ÚNICA SIDEBAR LATERAL EM 5 CAMADAS MODULARES -->
+  <aside id="sidebar-master" style="top: 76px; bottom: 16px; right: 16px; width: 388px;" class="fixed glass-panel rounded-2xl z-40 flex flex-col p-4 overflow-hidden transition-all duration-300 shadow-2xl">
+    
+    <!-- CABEÇALHO HUD DA SIDEBAR: STATUS ACÚSTICO & NÚCLEO GEOMÉTRICO INTEGRADO -->
+    <div class="pb-3 mb-3 border-b border-white/10">
+      <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center gap-1.5">
+          <span id="hud-source-led" class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span id="hud-source-badge" class="text-[9px] font-black uppercase tracking-widest text-cyan-400">Ressonância Acústica</span>
+        </div>
+        <span id="hud-mesa-badge" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[#d4af37]">
+          Mesa 1: Água Pura
+        </span>
+      </div>
+
+      <div class="flex items-baseline justify-between mt-1">
+        <div class="flex items-baseline gap-1.5">
+          <span id="hud-hz-value" class="text-4xl font-black font-mono tracking-tight text-white">0</span>
+          <span class="text-xs font-bold text-cyan-400">Hz</span>
+        </div>
+        <div class="text-right">
+          <div class="text-[8px] font-bold text-gray-400 uppercase">Estabilidade Harmônica</div>
+          <div class="flex items-center gap-1.5 justify-end mt-0.5">
+            <span id="hud-stability-led" class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+            <span id="hud-stability-val" class="text-[10px] font-mono text-emerald-300 font-bold">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leitura Dupla FFT Dominante vs Pitch Autocorrelação -->
+      <div class="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[8px] font-mono">
+        <div class="text-gray-400">
+          <span class="text-gray-500 font-bold uppercase">FFT Dominante:</span>
+          <span id="hud-fft-hz" class="text-cyan-300 font-bold ml-1">0 Hz</span>
+        </div>
+        <div class="text-gray-400">
+          <span class="text-gray-500 font-bold uppercase">Pitch (Autocorr):</span>
+          <span id="hud-pitch-hz" class="text-amber-300 font-bold ml-1">--</span>
+        </div>
+      </div>
+
+      <div class="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[8px]">
+        <div class="flex items-center gap-1 text-gray-400 truncate pr-2">
+          <span class="font-bold uppercase shrink-0">Nodal:</span>
+          <span id="hud-pattern-name" class="text-white font-medium truncate">Cruz Diagonal Fundamental X</span>
+        </div>
+        <div class="font-mono text-gray-300 shrink-0" id="hud-mode-mn">
+          m=1, n=0 (2-fold)
+        </div>
+      </div>
+    </div>
+
+    <!-- CORPO DAS 5 CAMADAS EM ACORDEÃO AUTO-RECOLHÍVEL -->
+    <div class="space-y-2 flex-1 overflow-y-auto custom-scroll pr-1">
+
+      <!-- CAMADA 1: ÁUDIO & MIXER (FASE B) -->
+      <div class="drawer-group">
+        <button class="drawer-trigger open" onclick="toggleDrawer('drawer-audio', this)">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">🎵</span>
+            <span>1. Áudio &amp; Mixer</span>
+          </div>
+          <span class="drawer-arrow text-xs transition-transform duration-200">▾</span>
+        </button>
+        <div id="drawer-audio" class="drawer-content open space-y-3">
+          
+          <!-- Fontes de Entrada -->
+          <div class="grid grid-cols-2 gap-1.5">
+            <button id="btn-input-mic" class="glass-input p-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1.5 transition-colors" onclick="toggleMicInput()">
+              <span id="mic-icon">🎤</span>
+              <span id="mic-label">Microfone</span>
+            </button>
+            <label class="glass-input p-2 rounded-lg text-[9px] font-bold uppercase flex items-center justify-center gap-1.5 cursor-pointer hover:border-cyan-400 transition-colors">
+              <span>📁</span>
+              <span>Upload Áudio</span>
+              <input type="file" id="audio-file-input" accept="audio/*" multiple class="hidden" onchange="handleAudioUpload(event)">
+            </label>
+          </div>
+
+          <!-- Status da Fonte Ativa -->
+          <div id="audio-source-status" class="hidden p-2 rounded-lg bg-cyan-950/40 border border-cyan-500/30 text-[8px] flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-cyan-300">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+              <span id="audio-status-text" class="font-bold uppercase tracking-wider">Microfone Ativo (Tempo Real)</span>
+            </div>
+            <button class="text-gray-400 hover:text-red-400 text-[9px] px-1 font-bold" onclick="stopAllAudioSources()">✕ Desativar</button>
+          </div>
+
+          <!-- Player & Playlist de Áudio Local -->
+          <div id="audio-player-card" class="hidden p-2.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="truncate text-[9px] font-bold text-white pr-2 flex items-center gap-1.5">
+                <span class="text-xs text-cyan-400">🎵</span>
+                <span id="player-track-name" class="truncate font-mono">Faixa Selecionada</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button id="btn-player-play" class="w-7 h-7 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-300 flex items-center justify-center text-xs" onclick="toggleFilePlayback()" title="Reproduzir / Pausar">
+                  ▶
+                </button>
+                <button class="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center text-xs" onclick="stopFilePlayback()" title="Parar Áudio">
+                  ⏹
+                </button>
+              </div>
+            </div>
+
+            <!-- Fila de Faixas (Playlist) -->
+            <div id="audio-playlist-container" class="max-h-28 overflow-y-auto custom-scroll space-y-1 pt-1 border-t border-white/5">
+              <!-- Itens da Playlist injetados dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Volume Master -->
+          <div>
+            <div class="flex justify-between text-[9px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Volume Master</span>
+              <span id="lbl-master-vol" class="text-cyan-400 font-mono">85%</span>
+            </div>
+            <input type="range" id="slider-master-vol" min="0" max="100" value="85" oninput="updateAudioParam('volume', this.value)">
+          </div>
+
+          <!-- Filtro LowPass Contínuo -->
+          <div>
+            <div class="flex justify-between items-center text-[9px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Filtro LowPass (50–2000 Hz)</span>
+              <div class="flex items-center gap-1.5">
+                <span id="lbl-filter-hz" class="text-amber-400 font-mono">350 Hz</span>
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" id="chk-filter-active" class="accent-cyan-400 w-3 h-3" onchange="updateAudioParam('filterActive', this.checked)">
+                  <span class="text-[7px] text-gray-400 font-bold uppercase">Ativo</span>
+                </label>
+              </div>
+            </div>
+            <input type="range" id="slider-filter-hz" min="50" max="2000" step="10" value="350" oninput="updateAudioParam('filterHz', this.value)">
+          </div>
+
+          <!-- Detector de Batida / Peak LED (energyPeak) -->
+          <div class="flex items-center justify-between p-2 rounded-lg bg-white/3 border border-white/5 text-[8px]">
+            <div class="flex flex-col">
+              <span class="text-gray-400 uppercase font-bold">Detector de EnergyPeak (dE/dt):</span>
+              <span class="text-[7px] text-gray-500">Derivada da energia acústica no tempo</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="beat-led" class="w-3 h-3 rounded-full bg-cyan-500/20 border border-cyan-400/40 transition-all duration-100"></span>
+              <span id="beat-label" class="text-gray-300 font-mono uppercase text-[8px]">Beat Sync</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CAMADA 2: FÍSICA DA MESA -->
+      <div class="drawer-group">
+        <button class="drawer-trigger" onclick="toggleDrawer('drawer-physics', this)">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">🌊</span>
+            <span>2. Física da Mesa</span>
+          </div>
+          <span class="drawer-arrow text-xs transition-transform duration-200">▾</span>
+        </button>
+        <div id="drawer-physics" class="drawer-content space-y-3">
+          
+          <!-- Seletor de Acabamento da Superfície -->
+          <div>
+            <div class="text-[8px] font-bold uppercase text-gray-400 mb-1.5">Acabamento da Superfície</div>
+            <div class="grid grid-cols-3 gap-1">
+              <button id="opt-finish-mirror" class="glass-input p-1.5 rounded-lg text-[8px] font-bold uppercase text-center border-cyan-400 text-cyan-400" onclick="setSurfaceFinish('mirror')">
+                Espelho Negro
+              </button>
+              <button id="opt-finish-soft" class="glass-input p-1.5 rounded-lg text-[8px] font-bold uppercase text-center text-gray-300" onclick="setSurfaceFinish('soft')">
+                Luz Suave
+              </button>
+              <button id="opt-finish-anuhazi" class="glass-input p-1.5 rounded-lg text-[8px] font-bold uppercase text-center text-gray-300" onclick="setSurfaceFinish('anuhazi')">
+                Anuhazi
+              </button>
+            </div>
+          </div>
+
+          <!-- Ganho / Força da Onda -->
+          <div>
+            <div class="flex justify-between text-[9px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Força da Excitação (Gain)</span>
+              <span id="lbl-physics-gain" class="text-cyan-400 font-mono">35</span>
+            </div>
+            <input type="range" id="slider-physics-gain" min="1" max="100" value="35" oninput="updatePhysicsParam('gain', this.value)">
+          </div>
+
+          <!-- Viscosidade do Fluido -->
+          <div>
+            <div class="flex justify-between text-[9px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Amortecimento / Viscosidade (γ)</span>
+              <span id="lbl-physics-visc" class="text-amber-400 font-mono">0.965</span>
+            </div>
+            <input type="range" id="slider-physics-visc" min="940" max="985" value="965" oninput="updatePhysicsParam('viscosity', this.value / 1000)">
+          </div>
+
+          <!-- Modos Especiais de Deformação -->
+          <div class="grid grid-cols-2 gap-1.5 pt-1">
+            <button id="btn-phys-resonance" class="glass-input p-2 rounded-lg text-[8px] font-bold uppercase text-center" onclick="togglePhysicsToggle('resonance', this)">
+              Assimetria Harmônica
+            </button>
+            <button id="btn-phys-mercury" class="glass-input p-2 rounded-lg text-[8px] font-bold uppercase text-center" onclick="togglePhysicsToggle('mercury', this)">
+              Turbulência Mercúrio
+            </button>
+          </div>
+
+          <!-- 6 Nós de Tensão / Viscosidade (Anuhazi) (Fase D) -->
+          <div class="pt-2 border-t border-white/10 space-y-1.5">
+            <div class="flex justify-between items-center text-[8px] font-bold uppercase text-gray-400">
+              <span>6 Nós de Viscosidade (Anuhazi)</span>
+              <span id="lbl-node-active" class="text-cyan-400 font-mono text-[7px]">Calibrado</span>
+            </div>
+            <div class="grid grid-cols-6 gap-1">
+              <button class="node-btn p-1.5 rounded-lg border border-red-500/40 bg-red-500/10 hover:bg-red-500/30 text-center transition-all" title="Rubi (0.940)" onclick="applyViscosityNode(0.940, '#ff0033', this)">
+                <div class="w-3 h-3 rounded-full bg-red-500 mx-auto shadow-sm shadow-red-500"></div>
+                <span class="text-[7px] font-bold text-red-300 block mt-0.5">.940</span>
+              </button>
+              <button class="node-btn p-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/30 text-center transition-all" title="Âmbar (0.950)" onclick="applyViscosityNode(0.950, '#ffaa00', this)">
+                <div class="w-3 h-3 rounded-full bg-amber-500 mx-auto shadow-sm shadow-amber-500"></div>
+                <span class="text-[7px] font-bold text-amber-300 block mt-0.5">.950</span>
+              </button>
+              <button class="node-btn p-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/30 text-center transition-all" title="Esmeralda (0.960)" onclick="applyViscosityNode(0.960, '#00ff88', this)">
+                <div class="w-3 h-3 rounded-full bg-emerald-500 mx-auto shadow-sm shadow-emerald-500"></div>
+                <span class="text-[7px] font-bold text-emerald-300 block mt-0.5">.960</span>
+              </button>
+              <button class="node-btn p-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/30 text-center transition-all border-cyan-400 bg-cyan-500/20" title="Ciano (0.970)" onclick="applyViscosityNode(0.970, '#00ffff', this)">
+                <div class="w-3 h-3 rounded-full bg-cyan-400 mx-auto shadow-sm shadow-cyan-400"></div>
+                <span class="text-[7px] font-bold text-cyan-300 block mt-0.5">.970</span>
+              </button>
+              <button class="node-btn p-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/30 text-center transition-all" title="Safira (0.980)" onclick="applyViscosityNode(0.980, '#0066ff', this)">
+                <div class="w-3 h-3 rounded-full bg-blue-500 mx-auto shadow-sm shadow-blue-500"></div>
+                <span class="text-[7px] font-bold text-blue-300 block mt-0.5">.980</span>
+              </button>
+              <button class="node-btn p-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/30 text-center transition-all" title="Violeta (0.985)" onclick="applyViscosityNode(0.985, '#aa00ff', this)">
+                <div class="w-3 h-3 rounded-full bg-purple-500 mx-auto shadow-sm shadow-purple-500"></div>
+                <span class="text-[7px] font-bold text-purple-300 block mt-0.5">.985</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ação Mesa 2: Espalhar Areia -->
+          <div id="section-chladni-actions" class="pt-2 border-t border-white/10 hidden">
+            <button class="w-full py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-[#d4af37] text-[8px] font-black uppercase tracking-wider" onclick="scatterChladniSand()">
+              ⏳ Espalhar Areia na Placa (Γ &lt; 1.0)
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CAMADA 3: LUZES & ÓPTICA -->
+      <div class="drawer-group">
+        <button class="drawer-trigger" onclick="toggleDrawer('drawer-lights', this)">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">💡</span>
+            <span>3. Luzes &amp; Óptica</span>
+          </div>
+          <span class="drawer-arrow text-xs transition-transform duration-200">▾</span>
+        </button>
+        <div id="drawer-lights" class="drawer-content space-y-3">
+          
+          <!-- Anel de LEDs Rasantes -->
+          <div class="flex items-center justify-between p-2 rounded-lg bg-white/3 border border-white/5">
+            <div>
+              <div class="text-[9px] font-bold text-white uppercase">Anel Rasante (75°–85°)</div>
+              <div class="text-[7px] text-gray-400">Iluminação de cristas sem estourar branco</div>
+            </div>
+            <input type="checkbox" id="chk-grazing-ring" checked class="accent-cyan-400 w-3.5 h-3.5" onchange="toggleGrazingRing(this.checked)">
+          </div>
+
+          <!-- Luzes Customizadas Arrastáveis -->
+          <div class="space-y-2">
+            <!-- Toggle Luzes como Emissores na Água -->
+            <div class="flex items-center justify-between p-2 rounded-lg bg-white/3 border border-white/5">
+              <div>
+                <div class="text-[9px] font-bold text-white uppercase">Luzes como Emissores (Multi-Ponto)</div>
+                <div class="text-[7px] text-gray-400">Perturba a água nas coordenadas X/Z de cada luz</div>
+              </div>
+              <input type="checkbox" id="chk-lights-exciters" class="accent-cyan-400 w-3.5 h-3.5" onchange="toggleLightsAsExciters(this.checked)">
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[8px] font-black uppercase text-gray-400 tracking-wider">Luzes Arrastáveis (3D):</span>
+              <button class="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[8px] font-bold uppercase" onclick="addCustomLight()">
+                + Nova Luz
+              </button>
+            </div>
+            <div id="custom-lights-container" class="space-y-1.5 max-h-48 overflow-y-auto custom-scroll pr-1">
+              <!-- Cards de luz injetados dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Seção de 33 Raios Geométricos -->
+          <div class="pt-2 border-t border-white/10 space-y-2">
+            <div class="flex justify-between text-[9px] font-bold">
+              <span class="text-gray-400 uppercase">33 Raios Radiais</span>
+              <span id="lbl-ray-count" class="text-cyan-400 font-mono">0 raios</span>
+            </div>
+            <input type="range" id="slider-ray-count" min="0" max="33" value="0" oninput="updateRayCount(this.value)">
+
+            <div class="grid grid-cols-4 gap-1 pt-1">
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('pulse', this)">Pulsar</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('rotate', this)">Girar</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('ray8', this)">8 Loop</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('vortex', this)">Vortex</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1">
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('jump', this)">Salto</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('rainbow', this)">Arco-Íris</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('hzColor', this)">Hz Color</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('kaleido', this)">Caleido</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1">
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('straight', this)">Flash Reto</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('hypno', this)">Espiral</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('invert', this)">Inverter</button>
+              <button class="glass-input p-1 rounded text-[7px] font-bold uppercase text-center" onclick="toggleRayMode('cycle', this)">Cores</button>
+            </div>
+
+            <!-- Calibragem de Foco e Alcance dos Raios -->
+            <div class="grid grid-cols-2 gap-2 pt-1 text-[8px] font-bold">
+              <div>
+                <div class="flex justify-between mb-0.5"><span class="text-gray-400">Alcance (Raio)</span><span id="lbl-ray-dist" class="text-cyan-400 font-mono">55%</span></div>
+                <input type="range" id="slider-ray-dist" min="5" max="100" value="55" oninput="updateRayParam('dist', this.value)">
+              </div>
+              <div>
+                <div class="flex justify-between mb-0.5"><span class="text-gray-400">Intensidade</span><span id="lbl-ray-int" class="text-amber-400 font-mono">50</span></div>
+                <input type="range" id="slider-ray-int" min="0" max="150" value="50" oninput="updateRayParam('intensity', this.value)">
+              </div>
+            </div>
+
+            <div id="ray-colors-container" class="flex flex-wrap gap-1 pt-1 max-h-16 overflow-y-auto custom-scroll"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CAMADA 4: ATLAS HZ (FASE B) -->
+      <div class="drawer-group">
+        <button class="drawer-trigger" onclick="toggleDrawer('drawer-atlas', this)">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">📐</span>
+            <span>4. Atlas Hz</span>
+          </div>
+          <span class="drawer-arrow text-xs transition-transform duration-200">▾</span>
+        </button>
+        <div id="drawer-atlas" class="drawer-content space-y-3">
+          
+          <!-- Oscilador Senoidal Interno -->
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/10">
+            <div>
+              <div class="text-[9px] font-bold text-white uppercase flex items-center gap-1.5">
+                <span class="text-xs text-amber-400">∿</span>
+                <span>Oscilador Senoidal Interno</span>
+              </div>
+              <div class="text-[7px] text-gray-400">Síntese suave com rampa sem estalos</div>
+            </div>
+            <button id="btn-toggle-osc" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-[#d4af37] text-[8px] font-black uppercase tracking-wider transition-all" onclick="toggleInternalOscillator()">
+              Ativar Som
+            </button>
+          </div>
+
+          <!-- Slider de Frequência Manual -->
+          <div>
+            <div class="flex justify-between text-[9px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Frequência Manual</span>
+              <span id="lbl-atlas-manual-hz" class="text-cyan-400 font-mono">0 Hz</span>
+            </div>
+            <input type="range" id="slider-manual-hz" min="0" max="2000" step="1" value="0" oninput="setManualHz(this.value)">
+          </div>
+
+          <!-- Filtro de Categorias dos Presets -->
+          <div>
+            <div class="flex items-center justify-between text-[8px] font-bold uppercase text-gray-400 mb-1.5">
+              <span>Catálogo Calibrado (20–2000 Hz)</span>
+              <span id="atlas-count-badge" class="text-cyan-400 font-mono">25 presets</span>
+            </div>
+            <div class="flex flex-wrap gap-1 mb-2">
+              <button class="atlas-cat-tag active" onclick="filterAtlasPresets('todos', this)">Todos</button>
+              <button class="atlas-cat-tag" onclick="filterAtlasPresets('solfeggio', this)">Solfeggio</button>
+              <button class="atlas-cat-tag" onclick="filterAtlasPresets('graves', this)">Graves</button>
+              <button class="atlas-cat-tag" onclick="filterAtlasPresets('medios', this)">Médios</button>
+              <button class="atlas-cat-tag" onclick="filterAtlasPresets('agudos', this)">Agudos</button>
+            </div>
+
+            <!-- Grade de Presets do Atlas -->
+            <div id="atlas-presets-grid" class="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto custom-scroll pr-1">
+              <!-- Preenchido via JavaScript -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CAMADA 5: VJ & SESSÃO -->
+      <div class="drawer-group">
+        <button class="drawer-trigger" onclick="toggleDrawer('drawer-vj', this)">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">🎧</span>
+            <span>5. VJ &amp; Sessão</span>
+          </div>
+          <span class="drawer-arrow text-xs transition-transform duration-200">▾</span>
+        </button>
+        <div id="drawer-vj" class="drawer-content space-y-3">
+          
+          <!-- AI Visual DJ -->
+          <button id="btn-ai-dj" class="w-full py-2.5 rounded-xl glass-input hover:border-cyan-400 text-cyan-400 text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-2" onclick="toggleAIDJ(this)">
+            <span>✨</span>
+            <span>Ativar AI Visual DJ (Picos de Batida)</span>
+          </button>
+
+          <!-- Fluxo Generativo (Partículas em AdditiveBlending) -->
+          <div class="flex items-center justify-between p-2 rounded-lg bg-white/3 border border-white/5">
+            <div>
+              <div class="text-[9px] font-bold text-white uppercase">Fluxo Generativo</div>
+              <div class="text-[7px] text-gray-400">4.000 partículas em suspensão 3D</div>
+            </div>
+            <input type="checkbox" id="chk-gen-flux" class="accent-cyan-400 w-3.5 h-3.5" onchange="toggleGenerativeFlux(this.checked)">
+          </div>
+
+          <!-- Estabilização Cimática / Persistência -->
+          <div>
+            <div class="flex justify-between text-[9px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Estabilização Cimática</span>
+              <span id="lbl-persistence" class="text-amber-400 font-mono">15%</span>
+            </div>
+            <input type="range" id="slider-persistence" min="0" max="100" value="15" oninput="updatePersistence(this.value)">
+          </div>
+
+          <!-- Iniciar Sessão com Timer -->
+          <button class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-cyan-500/20 border border-amber-500/40 text-[#d4af37] text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2" onclick="startSession()">
+            <span>🧘</span>
+            <span>Iniciar Modo Imersão (Sessão)</span>
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RODAPÉ DA SIDEBAR: INFORMAÇÃO DO MOTOR -->
+    <div class="pt-3 mt-2 border-t border-white/10 flex items-center justify-between text-[8px] text-gray-500">
+      <span>Cymatics Studio v3.0 Master</span>
+      <span class="font-mono text-cyan-400/80">Web Audio &amp; WebGL</span>
+    </div>
+
+  </aside>
+
+  <!-- OVERLAY MODO SESSÃO IMERSIVA -->
+  <div id="session-overlay">
+    <div class="text-center space-y-4">
+      <div id="session-timer-display" class="text-8xl font-mono font-light text-white tracking-widest">15:00</div>
+      <div class="text-xs font-black tracking-[0.6em] text-[#d4af37] uppercase">Modo Sessão Cimática Ativo</div>
+      <p class="text-[10px] text-gray-400 max-w-sm mx-auto">Interface bloqueada para imersão acústica contínua sem cliques acidentais.</p>
+      <button class="mt-8 px-8 py-3 rounded-full border border-white/20 hover:border-amber-400 text-white hover:text-amber-300 text-[10px] font-bold uppercase tracking-widest transition-all" onclick="exitSession()">
+        Encerrar Sessão &amp; Retornar
+      </button>
+    </div>
+  </div>
+
+  <!-- SCRIPT CENTRAL DO CYMATICS STUDIO MASTER (FASE B) -->
+  <script>
+    /**
+     * ============================================================================
+     * CYMATICS STUDIO MASTER — ARQUITETURA MODULAR 3D (FASE B)
+     * ============================================================================
+     * 
+     * Regras Inegociáveis aplicadas:
+     * 1. Sem simulação 2D plana: Malha base 18x18, materiais PBR Espelho Negro (emissiveIntensity = 0).
+     * 2. Exatamente 3 Mesas previstas na arquitetura (Água Pura, Placa de Chladni, Fusão Híbrida).
+     * 3. UI estritamente organizada: Barra superior compacta + UMA única Sidebar em 5 camadas.
+     * 4. Motor de Áudio Web Audio API de alta fidelidade com autocorrelação temporal,
+     *    leitura FFT dominante, detector de picos de energia (energyPeak),
+     *    filtro LowPass contínuo pop-free e gerador senoidal com rampas lineares suaves.
+     * 5. Catálogo de 25 Presets Científicos Calibrados (Bloco 6 do Dossiê Técnico).
+     */
+
+    // --- ESTADO GLOBAL DA APLICAÇÃO ---
+    const STUDIO_STATE = {
+      activeMesa: 'water_pure', // 'water_pure' | 'chladni_sand' | 'fusion_cymatic'
+      activeSignature: 'sig_cimatic3',
+      surfaceFinish: 'mirror',  // 'mirror' | 'soft' | 'anuhazi'
+      isTopView: false,
+      sidebarVisible: true,
+      currentHz: 20,
+      manualHz: 0,
+      activePreset: null,
+      stability: 1.0,
+      volume: 0.85,
+      filterActive: false,
+      filterHz: 350,
+      gain: 35,
+      viscosity: 0.965,
+      persistence: 0.15,
+      resonance: false,
+      mercury: false,
+      grazingRing: true,
+      rayCount: 0,
+      rayDistance: 0.55,
+      rayIntensity: 50,
+      raySpeed: 1.0,
+      rayModes: {
+        pulse: false, rotate: false, ray8: false, vortex: false,
+        jump: false, rainbow: false, hzColor: false, kaleido: false,
+        straight: false, hypno: false, invert: false, cycle: false
+      },
+      aiDjActive: false,
+      generativeFlux: false,
+      lightsAsExciters: false,
+      isSessionActive: false,
+      activePresetFilter: 'todos'
+    };
+
+    // --- ATLAS DE 25 PRESETS CIENTÍFICOS CALIBRADOS (BLOQUE 6 DO DOSSIÊ TÉCNICO) ---
+    const CYMATICS_PRESETS = [
+      {
+        hz: 20.0,
+        nomeDoDesenho: "Cruz Diagonal Fundamental X / Onda Gravitacional Longa",
+        m: 1,
+        n: 0,
+        coefA: 1.0,
+        coefB: -1.0,
+        simetriaAgua: 2,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 32.5,
+        anguloLuzRecomendado: 75.5,
+        categoria: "graves"
+      },
+      {
+        hz: 27.0,
+        nomeDoDesenho: "Rede Quadrada Gravitacional / Cruz Diagonal X",
+        m: 1,
+        n: 0,
+        coefA: 1.0,
+        coefB: -1.0,
+        simetriaAgua: 4,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 44.2,
+        anguloLuzRecomendado: 76.0,
+        categoria: "graves"
+      },
+      {
+        hz: 43.0,
+        nomeDoDesenho: "Anel Concêntrico Primário / Cruz Diagonal Dupla",
+        m: 2,
+        n: 0,
+        coefA: 1.0,
+        coefB: -1.0,
+        simetriaAgua: 1,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 67.9,
+        anguloLuzRecomendado: 77.0,
+        categoria: "graves"
+      },
+      {
+        hz: 56.0,
+        nomeDoDesenho: "Grade Bilateral / Quatro Lóbulos Simétricos",
+        m: 2,
+        n: 1,
+        coefA: 1.0,
+        coefB: 0.35,
+        simetriaAgua: 4,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 91.4,
+        anguloLuzRecomendado: 78.0,
+        categoria: "graves"
+      },
+      {
+        hz: 66.0,
+        nomeDoDesenho: "Pentágono Líquido / Cruz Central Aberta",
+        m: 2,
+        n: 1,
+        coefA: 1.0,
+        coefB: 0.65,
+        simetriaAgua: 5,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 111.5,
+        anguloLuzRecomendado: 78.5,
+        categoria: "graves"
+      },
+      {
+        hz: 69.0,
+        nomeDoDesenho: "Decágono Estável / Cruz com Losango Interno",
+        m: 2,
+        n: 1,
+        coefA: 1.0,
+        coefB: 0.85,
+        simetriaAgua: 10,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 117.8,
+        anguloLuzRecomendado: 79.0,
+        categoria: "graves"
+      },
+      {
+        hz: 78.0,
+        nomeDoDesenho: "Roseta Dodecagonal / Quatro Pétalas Curvas",
+        m: 2,
+        n: 1,
+        coefA: 1.0,
+        coefB: -0.75,
+        simetriaAgua: 12,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 137.7,
+        anguloLuzRecomendado: 79.5,
+        categoria: "graves"
+      },
+      {
+        hz: 82.0,
+        nomeDoDesenho: "Flor Octogonal / Cruz Hiperbólica",
+        m: 2,
+        n: 1,
+        coefA: 1.0,
+        coefB: -1.0,
+        simetriaAgua: 8,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 146.8,
+        anguloLuzRecomendado: 79.5,
+        categoria: "graves"
+      },
+      {
+        hz: 107.0,
+        nomeDoDesenho: "Cruz Ortogonal e Lóbulos Primários (f1 Quadrada 24cm)",
+        m: 1,
+        n: 1,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 4,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 208.6,
+        anguloLuzRecomendado: 80.0,
+        categoria: "graves"
+      },
+      {
+        hz: 110.0,
+        nomeDoDesenho: "Lá2 — Losango Central Inscrito / Decágono Harmônico",
+        m: 2,
+        n: 0,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 10,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 216.5,
+        anguloLuzRecomendado: 80.0,
+        categoria: "graves"
+      },
+      {
+        hz: 174.0,
+        nomeDoDesenho: "Solfeggio 174 / Primeiro Modo Hexagonal",
+        m: 2,
+        n: 1,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 10,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 225.0,
+        anguloLuzRecomendado: 80.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 238.0,
+        nomeDoDesenho: "Rede Hexagonal / Grade de Seis Setores",
+        m: 3,
+        n: 1,
+        coefA: 1.0,
+        coefB: 0.55,
+        simetriaAgua: 6,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 235.0,
+        anguloLuzRecomendado: 80.5,
+        categoria: "medios"
+      },
+      {
+        hz: 283.0,
+        nomeDoDesenho: "Anel Duplo e Quatro Lóbulos (f2 Quadrada 24cm)",
+        m: 3,
+        n: 1,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 8,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 240.0,
+        anguloLuzRecomendado: 80.5,
+        categoria: "medios"
+      },
+      {
+        hz: 285.0,
+        nomeDoDesenho: "Solfeggio 285 / Roseta Quadrangular de Quatro Lóbulos",
+        m: 3,
+        n: 1,
+        coefA: 1.0,
+        coefB: -1.0,
+        simetriaAgua: 8,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 240.0,
+        anguloLuzRecomendado: 80.5,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 396.0,
+        nomeDoDesenho: "Solfeggio 396 / Mandala de Oito Setores",
+        m: 3,
+        n: 2,
+        coefA: 1.0,
+        coefB: 0.6,
+        simetriaAgua: 12,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 255.0,
+        anguloLuzRecomendado: 81.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 417.0,
+        nomeDoDesenho: "Solfeggio 417 / Estrela Octogonal Simétrica",
+        m: 3,
+        n: 2,
+        coefA: 1.0,
+        coefB: -0.85,
+        simetriaAgua: 12,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 260.0,
+        anguloLuzRecomendado: 81.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 432.0,
+        nomeDoDesenho: "Afinação 432 / Grade de Quatro Lóbulos e Anel Central",
+        m: 2,
+        n: 2,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 12,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 265.0,
+        anguloLuzRecomendado: 81.5,
+        categoria: "medios"
+      },
+      {
+        hz: 440.0,
+        nomeDoDesenho: "Lá4 Padrão / Cruz Hiperbólica Dupla",
+        m: 3,
+        n: 2,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 16,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 268.0,
+        anguloLuzRecomendado: 81.5,
+        categoria: "medios"
+      },
+      {
+        hz: 528.0,
+        nomeDoDesenho: "Solfeggio 528 / Flor de Oito Pétalas e Núcleo Estrelado",
+        m: 3,
+        n: 2,
+        coefA: 1.0,
+        coefB: -1.0,
+        simetriaAgua: 18,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 280.0,
+        anguloLuzRecomendado: 82.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 639.0,
+        nomeDoDesenho: "Solfeggio 639 / Grade Cristalina Intermediária",
+        m: 4,
+        n: 2,
+        coefA: 1.0,
+        coefB: -0.8,
+        simetriaAgua: 20,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 295.0,
+        anguloLuzRecomendado: 82.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 741.0,
+        nomeDoDesenho: "Solfeggio 741 / Roseta de Três Anéis e Seis Lobos",
+        m: 4,
+        n: 2,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 24,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 310.0,
+        anguloLuzRecomendado: 82.5,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 852.0,
+        nomeDoDesenho: "Solfeggio 852 / Rede Hiperbólica Densa",
+        m: 4,
+        n: 3,
+        coefA: 1.0,
+        coefB: 0.75,
+        simetriaAgua: 26,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 325.0,
+        anguloLuzRecomendado: 83.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 963.0,
+        nomeDoDesenho: "Solfeggio 963 / Grade Simétrica e Roseta de 12 Pontas",
+        m: 5,
+        n: 2,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 28,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 340.0,
+        anguloLuzRecomendado: 83.0,
+        categoria: "solfeggio"
+      },
+      {
+        hz: 1181.0,
+        nomeDoDesenho: "Mandala Cristalina de 4 Anéis (f5 Quadrada 24cm)",
+        m: 5,
+        n: 3,
+        coefA: 1.0,
+        coefB: -0.95,
+        simetriaAgua: 32,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 360.0,
+        anguloLuzRecomendado: 83.5,
+        categoria: "agudos"
+      },
+      {
+        hz: 2000.0,
+        nomeDoDesenho: "Micro-Retícula Cristalina Capilar de Alta Ordem",
+        m: 6,
+        n: 4,
+        coefA: 1.0,
+        coefB: 1.0,
+        simetriaAgua: 48,
+        tensaoSuperficial: 0.045,
+        amortecimentoIdeal: 400.0,
+        anguloLuzRecomendado: 84.0,
+        categoria: "agudos"
+      }
+    ];
+
+    // --- ALGORITMO DE AUTOCORRELAÇÃO TEMPORAL (PITCH EXTRACTION) ---
+    // Herdado e calibrado de cimaticlabsanuhazi.html para resposta sem latência
+    function autoCorrelate(buf, sampleRate) {
+      let rms = 0;
+      const len = buf.length;
+      for (let i = 0; i < len; i++) {
+        rms += buf[i] * buf[i];
+      }
+      rms = Math.sqrt(rms / len);
+      if (rms < 0.008) return -1; // Silêncio / Ruído de fundo
+
+      const minPeriod = Math.max(14, Math.floor(sampleRate / 2200));
+      const maxPeriod = Math.min(Math.floor(len / 2), Math.floor(sampleRate / 20));
+      
+      let bestCorr = -1;
+      let bestPeriod = -1;
+      const halfLen = Math.floor(len / 2);
+
+      for (let period = minPeriod; period < maxPeriod; period++) {
+        let corr = 0;
+        for (let j = 0; j < halfLen; j += 2) { // Passo 2x para otimização de alta performance
+          corr += Math.abs(buf[j] - buf[j + period]);
+        }
+        corr = 1 - (corr / (halfLen / 2));
+        if (corr > bestCorr) {
+          bestCorr = corr;
+          bestPeriod = period;
+        }
+      }
+
+      if (bestCorr > 0.78 && bestPeriod > 0) {
+        return sampleRate / bestPeriod;
+      }
+      return -1;
+    }
+
+    // --- MOTOR DE ÁUDIO WEB AUDIO API (AUDIOENGINE) ---
+    const AudioEngine = {
+      ctx: null,
+      analyser: null,
+      masterGain: null,
+      playbackGain: null,
+      lowPassFilter: null,
+      filterActive: false,
+      filterHz: 350,
+
+      // Buffers FFT e Domínio Temporal
+      fftData: null,
+      timeDomainData: null,
+
+      // Fontes
+      currentSourceType: null, // 'mic' | 'file' | 'oscillator' | null
+      micStream: null,
+      micSourceNode: null,
+      fileAudioElement: null,
+      fileSourceNode: null,
+
+      // Oscilador Senoidal Interno
+      oscillatorNode: null,
+      oscillatorGain: null,
+      isOscillatorActive: false,
+      oscillatorHz: 432,
+
+      // Estado de Análise
+      fftDominantHz: 0,
+      pitchHz: -1,
+      lastPitchHz: 0,
+      smoothedVolume: 0,
+      previousEnergy: 0,
+      energyDerivative: 0,
+      energyPeak: false,
+      lastBeatTime: 0,
+      energyAvg: 0.01,
+      stability: 1.0,
+
+      // Playlist
+      playlist: [],
+      currentTrackIndex: -1,
+
+      async init() {
+        if (!this.ctx) {
+          const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtxClass();
+
+          this.analyser = this.ctx.createAnalyser();
+          this.analyser.fftSize = 2048;
+          this.analyser.smoothingTimeConstant = 0.8;
+
+          this.fftData = new Uint8Array(this.analyser.frequencyBinCount);
+          this.timeDomainData = new Float32Array(this.analyser.fftSize);
+
+          this.lowPassFilter = this.ctx.createBiquadFilter();
+          this.lowPassFilter.type = 'lowpass';
+          this.lowPassFilter.Q.value = 0.707;
+          // Se inativo, frequência é setada no Nyquist (completamente aberta e transparente)
+          this.lowPassFilter.frequency.value = this.filterActive ? this.filterHz : (this.ctx.sampleRate / 2);
+
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = STUDIO_STATE.volume;
+          this.masterGain.connect(this.ctx.destination);
+
+          this.playbackGain = this.ctx.createGain();
+          this.playbackGain.gain.value = 1.0;
+          this.playbackGain.connect(this.masterGain);
+
+          // Roteamento: lowPassFilter -> analyser
+          this.lowPassFilter.connect(this.analyser);
+        }
+
+        if (this.ctx.state === 'suspended') {
+          await this.ctx.resume();
+        }
+      },
+
+      setVolume(val) {
+        if (this.masterGain && this.ctx) {
+          const now = this.ctx.currentTime;
+          this.masterGain.gain.cancelScheduledValues(now);
+          this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
+          this.masterGain.gain.linearRampToValueAtTime(Math.max(0, Math.min(1, val)), now + 0.03);
+        }
+      },
+
+      setFilter(active, hz) {
+        this.filterActive = active;
+        if (hz !== undefined) this.filterHz = hz;
+        if (this.lowPassFilter && this.ctx) {
+          const now = this.ctx.currentTime;
+          const targetFreq = this.filterActive ? Math.max(50, Math.min(2000, this.filterHz)) : (this.ctx.sampleRate / 2);
+          this.lowPassFilter.frequency.cancelScheduledValues(now);
+          this.lowPassFilter.frequency.setValueAtTime(this.lowPassFilter.frequency.value, now);
+          this.lowPassFilter.frequency.linearRampToValueAtTime(targetFreq, now + 0.05);
+        }
+      },
+
+      async startMic() {
+        await this.init();
+        this.stopPlayback(false);
+        this.fadeOscillator(0, 0.2);
+
+        if (this.micSourceNode) {
+          this.stopMic();
+          return false;
+        }
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+          });
+          this.micStream = stream;
+          this.micSourceNode = this.ctx.createMediaStreamSource(stream);
+          // Conecta ao filtro e analisador (sem enviar para playbackGain para evitar microfonia!)
+          this.micSourceNode.connect(this.lowPassFilter);
+          this.currentSourceType = 'mic';
+          return true;
+        } catch (err) {
+          console.warn("[AudioEngine] Microfone negado ou indisponível:", err);
+          return false;
+        }
+      },
+
+      stopMic() {
+        if (this.micStream) {
+          this.micStream.getTracks().forEach(t => t.stop());
+          this.micStream = null;
+        }
+        if (this.micSourceNode) {
+          try { this.micSourceNode.disconnect(); } catch (e) {}
+          this.micSourceNode = null;
+        }
+        if (this.currentSourceType === 'mic') {
+          this.currentSourceType = null;
+        }
+      },
+
+      async loadFiles(fileList) {
+        await this.init();
+        const newTracks = Array.from(fileList).map(file => ({
+          name: file.name,
+          url: URL.createObjectURL(file)
+        }));
+        this.playlist = [...this.playlist, ...newTracks];
+        return this.playlist;
+      },
+
+      async playTrack(index) {
+        if (index < 0 || index >= this.playlist.length) return false;
+        await this.init();
+        this.stopMic();
+        this.fadeOscillator(0, 0.2);
+
+        if (this.fileAudioElement && this.currentTrackIndex === index) {
+          if (this.fileAudioElement.paused) {
+            await this.fileAudioElement.play();
+            return true;
+          } else {
+            this.fileAudioElement.pause();
+            return false;
+          }
+        }
+
+        if (this.fileAudioElement) {
+          this.fileAudioElement.pause();
+          try { this.fileSourceNode.disconnect(); } catch (e) {}
+        }
+
+        this.currentTrackIndex = index;
+        const track = this.playlist[index];
+        this.fileAudioElement = new Audio(track.url);
+        this.fileSourceNode = this.ctx.createMediaElementSource(this.fileAudioElement);
+
+        this.fileSourceNode.connect(this.lowPassFilter);
+        // Garante que o sinal analisado passe para os alto-falantes
+        try { this.analyser.connect(this.playbackGain); } catch (e) {}
+
+        this.fileAudioElement.onended = () => {
+          if (this.currentTrackIndex + 1 < this.playlist.length) {
+            this.playTrack(this.currentTrackIndex + 1);
+            onAudioTrackChanged();
+          } else {
+            onAudioPlaybackPaused();
+          }
+        };
+
+        this.fileAudioElement.onplay = () => onAudioPlaybackStarted();
+        this.fileAudioElement.onpause = () => onAudioPlaybackPaused();
+
+        await this.fileAudioElement.play();
+        this.currentSourceType = 'file';
+        return true;
+      },
+
+      stopPlayback(resetIndex = true) {
+        if (this.fileAudioElement) {
+          this.fileAudioElement.pause();
+          this.fileAudioElement.currentTime = 0;
+        }
+        if (resetIndex) {
+          this.currentTrackIndex = -1;
+        }
+        if (this.currentSourceType === 'file') {
+          this.currentSourceType = null;
+        }
+      },
+
+      // Oscilador Senoidal Interno com rampa linear sem estalos (linearRampToValueAtTime)
+      async startOscillator(freq = 432, targetGain = 0.45, fadeDuration = 0.3) {
+        await this.init();
+        if (this.ctx && this.ctx.state === 'suspended') {
+          await this.ctx.resume();
+        }
+        this.stopMic();
+        this.stopPlayback(false);
+
+        if (!this.oscillatorNode) {
+          this.oscillatorNode = this.ctx.createOscillator();
+          this.oscillatorNode.type = 'sine';
+          this.oscillatorNode.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+          this.oscillatorGain = this.ctx.createGain();
+          this.oscillatorGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+          this.oscillatorNode.connect(this.oscillatorGain);
+          this.oscillatorGain.connect(this.lowPassFilter);
+          this.oscillatorGain.connect(this.playbackGain);
+          try { this.analyser.connect(this.playbackGain); } catch (e) {}
+
+          this.oscillatorNode.start();
+        }
+
+        this.setOscillatorFrequency(freq, 0.06);
+        this.fadeOscillator(targetGain, fadeDuration);
+        this.isOscillatorActive = true;
+        this.currentSourceType = 'oscillator';
+      },
+
+      fadeOscillator(targetGain, duration = 0.4) {
+        if (this.oscillatorGain && this.ctx) {
+          const now = this.ctx.currentTime;
+          this.oscillatorGain.gain.cancelScheduledValues(now);
+          this.oscillatorGain.gain.setValueAtTime(this.oscillatorGain.gain.value, now);
+          this.oscillatorGain.gain.linearRampToValueAtTime(targetGain, now + duration);
+          if (targetGain <= 0.001) {
+            this.isOscillatorActive = false;
+            if (this.currentSourceType === 'oscillator') this.currentSourceType = null;
+          } else {
+            this.isOscillatorActive = true;
+            this.currentSourceType = 'oscillator';
+          }
+        }
+      },
+
+      setOscillatorFrequency(freq, duration = 0.05) {
+        this.oscillatorHz = freq;
+        if (this.oscillatorNode && this.ctx) {
+          const now = this.ctx.currentTime;
+          this.oscillatorNode.frequency.cancelScheduledValues(now);
+          this.oscillatorNode.frequency.setValueAtTime(this.oscillatorNode.frequency.value, now);
+          this.oscillatorNode.frequency.linearRampToValueAtTime(Math.max(20, Math.min(2000, freq)), now + duration);
+        }
+      },
+
+      // Análise em Tempo Real executada a cada frame (sem travar a renderização)
+      updateAnalysis(time) {
+        if (!this.analyser || !this.ctx) {
+          return {
+            dominantHz: 0,
+            pitchHz: -1,
+            volume: 0,
+            energyPeak: false,
+            stability: this.stability
+          };
+        }
+
+        this.analyser.getByteFrequencyData(this.fftData);
+        this.analyser.getFloatTimeDomainData(this.timeDomainData);
+
+        // 1. Frequência Dominante FFT
+        let maxVal = 0;
+        let maxBin = 0;
+        let sumMag = 0;
+        const binCount = this.analyser.frequencyBinCount;
+        for (let i = 1; i < binCount; i++) {
+          const mag = this.fftData[i];
+          sumMag += mag;
+          if (mag > maxVal) {
+            maxVal = mag;
+            maxBin = i;
+          }
+        }
+
+        // 1. RMS de amplitude no domínio do tempo (volume acústico real)
+        let rms = 0;
+        for (let i = 0; i < this.timeDomainData.length; i++) {
+          rms += this.timeDomainData[i] * this.timeDomainData[i];
+        }
+        rms = Math.sqrt(rms / this.timeDomainData.length);
+
+        const sampleRate = this.ctx.sampleRate;
+        const fftDominant = maxBin * (sampleRate / this.analyser.fftSize);
+
+        if (rms > 0.002 || this.isOscillatorActive) {
+          this.fftDominantHz = this.fftDominantHz * 0.7 + (this.isOscillatorActive ? this.oscillatorHz : fftDominant) * 0.3;
+        } else {
+          this.fftDominantHz *= 0.95;
+        }
+
+        // 2. Extração do Tom Fundamental (Pitch) via Autocorrelação
+        const pitch = autoCorrelate(this.timeDomainData, sampleRate);
+        if (pitch > 20) {
+          this.pitchHz = pitch;
+          const pitchDelta = Math.abs(this.pitchHz - this.lastPitchHz);
+          if (pitchDelta < 2.0) {
+            this.stability = Math.min(1.0, this.stability + 0.02);
+          } else {
+            this.stability = Math.max(0.0, this.stability - 0.04);
+          }
+          this.lastPitchHz = this.pitchHz;
+        } else {
+          this.pitchHz = -1;
+          this.stability *= 0.985;
+        }
+
+        // Se o oscilador senoidal interno estiver ativo, estabilidade é 100% pura
+        if (this.isOscillatorActive) {
+          this.stability = this.stability * 0.95 + 1.0 * 0.05;
+          this.pitchHz = this.oscillatorHz;
+          this.fftDominantHz = this.oscillatorHz;
+        }
+
+        // 3. Envelope de Volume Suavizado e Calibrado
+        if (this.isOscillatorActive) {
+          const targetVol = 0.85;
+          this.smoothedVolume = this.smoothedVolume * 0.70 + targetVol * 0.30;
+        } else if (rms > 0.002) {
+          const targetVol = Math.min(1.0, rms * 4.0);
+          this.smoothedVolume = this.smoothedVolume * 0.70 + targetVol * 0.30;
+        } else {
+          this.smoothedVolume *= 0.88;
+          if (this.smoothedVolume < 0.001) this.smoothedVolume = 0;
+        }
+
+        // 4. Derivada Temporal da Energia Acústica & Detector de Picos (energyPeak)
+        let energy = 0;
+        for (let i = 0; i < this.timeDomainData.length; i++) {
+          energy += this.timeDomainData[i] * this.timeDomainData[i];
+        }
+        energy = energy / this.timeDomainData.length;
+
+        this.energyDerivative = energy - this.previousEnergy;
+        this.previousEnergy = energy;
+        this.energyAvg = this.energyAvg * 0.94 + energy * 0.06;
+
+        const nowMs = performance.now();
+        // energyPeak acionado quando a derivada dE/dt e o nível superam o limiar dinâmico
+        if (this.energyDerivative > 0.0012 && energy > this.energyAvg * 1.30 && (nowMs - this.lastBeatTime > 160)) {
+          this.energyPeak = true;
+          this.lastBeatTime = nowMs;
+        } else {
+          this.energyPeak = false;
+        }
+
+        return {
+          dominantHz: this.fftDominantHz,
+          pitchHz: this.pitchHz,
+          volume: this.smoothedVolume,
+          energyPeak: this.energyPeak,
+          stability: this.stability
+        };
+      }
+    };
+
+    // --- VARIÁVEIS DO PALCO THREE.JS ---
+    let scene, camera, renderer, controls;
+    let baseMesh, baseGeometry, baseMaterial;
+    let originalPositions = [];
+    let grazingRingGroup, customLightsGroup, rayLightsGroup;
+    let customLights = [];
+    let lightIdSeq = 0;
+    let selectedLight = null;
+    let clock = new THREE.Clock();
+    let raycaster = new THREE.Raycaster();
+    let mouse = new THREE.Vector2();
+    let dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    let isDraggingLight = false;
+
+    // --- VARIÁVEIS MESA 2 (MICROGRÃOS DE AREIA DE CHLADNI) ---
+    let sandPoints, sandGeometry, sandMaterial;
+    const SAND_COUNT = 25000;
+    let sandPositions, sandVelocities;
+
+    // --- VARIÁVEIS SISTEMA DE 33 RAIOS ---
+    const RAY_MAX = 33;
+    const rayLightsPool = [];
+
+    // --- VARIÁVEIS FASE D (FLUXO GENERATIVO & PERSISTÊNCIA FBO/MALHA) ---
+    let dustParticles, dustGeometry, dustPositions, dustVelocities;
+    const DUST_COUNT = 4000;
+    let previousHeights = null;
+
+    // --- INICIALIZAÇÃO DA CENA THREE.JS (FASE A & B) ---
+    function initCymaticsStudio() {
+      const container = document.getElementById('webgl-canvas');
+      
+      // 1. Cena com fundo preto absoluto (Regra Inegociável #1)
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+
+      // 2. Câmera Orbital com Perspectiva suave
+      const aspect = window.innerWidth / window.innerHeight;
+      camera = new THREE.PerspectiveCamera(38, aspect, 0.1, 1000);
+      camera.position.set(0, 18, 22);
+
+      // 3. Renderer WebGL de Alta Performance
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      container.appendChild(renderer.domElement);
+
+      // 4. OrbitControls suave para navegação 3D
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 - 0.02; // Não afunda abaixo da mesa
+      controls.minDistance = 6;
+      controls.maxDistance = 50;
+      controls.target.set(0, 0, 0);
+
+      // 5. Malha Base 18x18 (Resolução 160x160)
+      const MESH_SIZE = 18;
+      const MESH_RES = 160;
+      baseGeometry = new THREE.PlaneGeometry(MESH_SIZE, MESH_SIZE, MESH_RES, MESH_RES);
+      baseGeometry.rotateX(-Math.PI / 2); // Deita no plano XZ horizontal
+
+      // Salva posições originais para deformação física
+      const posAttr = baseGeometry.attributes.position;
+      originalPositions = new Float32Array(posAttr.array.length);
+      previousHeights = new Float32Array(posAttr.array.length / 3);
+      for (let i = 0; i < posAttr.array.length; i++) {
+        originalPositions[i] = posAttr.array[i];
+      }
+
+      // 5.1 Fluxo Generativo: 4.000 Partículas em AdditiveBlending (Fase D)
+      dustGeometry = new THREE.BufferGeometry();
+      dustPositions = new Float32Array(DUST_COUNT * 3);
+      dustVelocities = new Float32Array(DUST_COUNT * 3);
+      const dustColors = new Float32Array(DUST_COUNT * 3);
+
+      for (let i = 0; i < DUST_COUNT; i++) {
+        dustPositions[i * 3] = (Math.random() * 2 - 1) * 11.5;
+        dustPositions[i * 3 + 1] = Math.random() * 7.5 + 0.5;
+        dustPositions[i * 3 + 2] = (Math.random() * 2 - 1) * 11.5;
+
+        dustVelocities[i * 3] = (Math.random() - 0.5) * 0.012;
+        dustVelocities[i * 3 + 1] = Math.random() * 0.015 + 0.005;
+        dustVelocities[i * 3 + 2] = (Math.random() - 0.5) * 0.012;
+
+        const isCyan = Math.random() > 0.45;
+        dustColors[i * 3] = isCyan ? 0.0 : 0.85;
+        dustColors[i * 3 + 1] = isCyan ? 0.82 : 0.65;
+        dustColors[i * 3 + 2] = isCyan ? 1.0 : 0.25;
+      }
+      dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+      dustGeometry.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+
+      const dustMaterial = new THREE.PointsMaterial({
+        size: 0.075,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.65,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      dustParticles = new THREE.Points(dustGeometry, dustMaterial);
+      dustParticles.visible = STUDIO_STATE.generativeFlux;
+      scene.add(dustParticles);
+
+      // Material PBR "Espelho Negro Líquido" (Zero emissão lavada)
+      baseMaterial = new THREE.MeshStandardMaterial({
+        color: 0x050508,
+        metalness: 0.98,
+        roughness: 0.08,
+        emissive: 0x000000,
+        emissiveIntensity: 0.0,
+        flatShading: false
+      });
+
+      baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+      baseMesh.receiveShadow = false;
+      scene.add(baseMesh);
+
+      // 5.2 Sistema de Microgrãos de Areia de Chladni (Mesa 2 - 25.000 partículas)
+      sandGeometry = new THREE.BufferGeometry();
+      sandPositions = new Float32Array(SAND_COUNT * 3);
+      sandVelocities = new Float32Array(SAND_COUNT * 2);
+      const sandColors = new Float32Array(SAND_COUNT * 3);
+
+      const baseSandColor = new THREE.Color(0xd4af37);
+      for (let i = 0; i < SAND_COUNT; i++) {
+        const shade = 0.82 + Math.random() * 0.36;
+        sandColors[i * 3] = baseSandColor.r * shade;
+        sandColors[i * 3 + 1] = baseSandColor.g * shade;
+        sandColors[i * 3 + 2] = baseSandColor.b * shade;
+      }
+      sandGeometry.setAttribute('position', new THREE.BufferAttribute(sandPositions, 3));
+      sandGeometry.setAttribute('color', new THREE.BufferAttribute(sandColors, 3));
+
+      sandMaterial = new THREE.PointsMaterial({
+        size: 0.055,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false
+      });
+      sandPoints = new THREE.Points(sandGeometry, sandMaterial);
+      sandPoints.visible = (STUDIO_STATE.activeMesa === 'chladni_sand');
+      scene.add(sandPoints);
+
+      // Espalha a areia inicialmente na placa
+      scatterChladniSand();
+
+      // 6. Grupos de Iluminação
+      grazingRingGroup = new THREE.Group();
+      customLightsGroup = new THREE.Group();
+      rayLightsGroup = new THREE.Group();
+      scene.add(grazingRingGroup);
+      scene.add(customLightsGroup);
+      scene.add(rayLightsGroup);
+
+      // Luz ambiente mínima para evitar sombras cortadas duras
+      scene.add(new THREE.AmbientLight(0xffffff, 0.04));
+
+      // Monta o Anel de LEDs Rasantes (75°–85° de inclinação)
+      setupGrazingRing();
+
+      // Monta o Pool de 33 Raios Geométricos
+      setupRayLights();
+
+      // Monta as 3 Luzes Customizadas Arrastáveis Iniciais (Calibradas)
+      addCustomLight('#00d2ff', [6.0, 2.2, 6.0], 80, 50);
+      addCustomLight('#ff0055', [-6.0, 2.2, -6.0], 80, 50);
+      addCustomLight('#d4af37', [0.0, 5.5, 0.0], 35, 75);
+
+      // 7. Eventos de Janela e Interações
+      window.addEventListener('resize', onWindowResize);
+      setupRaycastingInteractions();
+
+      // 8. Popula UI da Fase B
+      populateAtlasPresets();
+      renderCustomLightsList();
+
+      // Seleciona o primeiro preset por padrão
+      if (CYMATICS_PRESETS.length > 0) {
+        selectAtlasPreset(CYMATICS_PRESETS[0], false);
+      }
+
+      // Inicia o Loop de Renderização 3D
+      animate();
+    }
+
+    // --- CONFIGURAÇÃO DO ANEL DE LEDS RASANTES (75°–85°) ---
+    function setupGrazingRing() {
+      while(grazingRingGroup.children.length > 0) {
+        grazingRingGroup.remove(grazingRingGroup.children[0]);
+      }
+
+      const ringCount = 16;
+      const radius = 10.5;
+      const yHeight = 1.35; // Rasante em relação à mesa 18x18
+
+      for (let i = 0; i < ringCount; i++) {
+        const angle = (i / ringCount) * Math.PI * 2;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+
+        const ledLight = new THREE.PointLight(0xffffff, 18, 12, 2.0);
+        ledLight.position.set(x, yHeight, z);
+        grazingRingGroup.add(ledLight);
+      }
+    }
+
+    // --- SISTEMA DE LUZES CUSTOMIZADAS ARRASTÁVEIS ---
+    function addCustomLight(hex = '#00d2ff', pos = [4.0, 2.5, 4.0], intensity = 75, angle = 50) {
+      lightIdSeq++;
+      const id = lightIdSeq;
+
+      // Luz pontual Three.js com atenuação calibrada
+      const pointLight = new THREE.PointLight(hex, intensity, 22, 1.8);
+      pointLight.position.set(pos[0], pos[1], pos[2]);
+
+      // Gizmo visual 3D (esferinha brilhante arrastável)
+      const gizmoGeo = new THREE.SphereGeometry(0.22, 16, 16);
+      const gizmoMat = new THREE.MeshBasicMaterial({ color: hex });
+      const gizmoMesh = new THREE.Mesh(gizmoGeo, gizmoMat);
+      gizmoMesh.userData = { isGizmo: true, lightId: id };
+      pointLight.add(gizmoMesh);
+
+      customLightsGroup.add(pointLight);
+
+      const lightEntry = {
+        id: id,
+        light: pointLight,
+        gizmo: gizmoMesh,
+        hex: hex,
+        intensity: intensity,
+        angle: angle,
+        y: pos[1]
+      };
+
+      customLights.push(lightEntry);
+      selectedLight = lightEntry;
+      renderCustomLightsList();
+      return lightEntry;
+    }
+
+    function removeCustomLight(id) {
+      const idx = customLights.findIndex(l => l.id === id);
+      if (idx !== -1) {
+        const item = customLights[idx];
+        customLightsGroup.remove(item.light);
+        customLights.splice(idx, 1);
+        if (selectedLight && selectedLight.id === id) {
+          selectedLight = customLights.length > 0 ? customLights[0] : null;
+        }
+        renderCustomLightsList();
+      }
+    }
+
+    function renderCustomLightsList() {
+      const container = document.getElementById('custom-lights-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      customLights.forEach((entry, idx) => {
+        const isSel = selectedLight && selectedLight.id === entry.id;
+        const card = document.createElement('div');
+        card.className = `light-card ${isSel ? 'selected' : ''}`;
+        card.onclick = () => { selectedLight = entry; renderCustomLightsList(); };
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <input type="color" value="${entry.hex}" onchange="updateLightColor(${entry.id}, this.value)" onclick="event.stopPropagation()">
+              <span class="text-[9px] font-bold text-white uppercase">Luz ${idx + 1}</span>
+            </div>
+            ${customLights.length > 1 ? `
+              <button onclick="event.stopPropagation(); removeCustomLight(${entry.id})" class="text-gray-500 hover:text-red-400 text-xs px-1">✕</button>
+            ` : ''}
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[8px]">
+            <div>
+              <div class="flex justify-between text-gray-400 mb-0.5">
+                <span>Força</span><span class="text-cyan-400 font-mono">${entry.intensity}</span>
+              </div>
+              <input type="range" min="0" max="150" value="${entry.intensity}" oninput="updateLightIntensity(${entry.id}, this.value)" onclick="event.stopPropagation()">
+            </div>
+            <div>
+              <div class="flex justify-between text-gray-400 mb-0.5">
+                <span>Altura Y</span><span class="text-amber-400 font-mono">${entry.y.toFixed(1)}m</span>
+              </div>
+              <input type="range" min="5" max="100" value="${entry.y * 10}" oninput="updateLightHeight(${entry.id}, this.value / 10)" onclick="event.stopPropagation()">
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function updateLightColor(id, hex) {
+      const entry = customLights.find(l => l.id === id);
+      if (entry) {
+        entry.hex = hex;
+        entry.light.color.set(hex);
+        entry.gizmo.material.color.set(hex);
+      }
+    }
+
+    function updateLightIntensity(id, val) {
+      const entry = customLights.find(l => l.id === id);
+      if (entry) {
+        entry.intensity = parseFloat(val);
+        entry.light.intensity = entry.intensity;
+        renderCustomLightsList();
+      }
+    }
+
+    function updateLightHeight(id, val) {
+      const entry = customLights.find(l => l.id === id);
+      if (entry) {
+        entry.y = parseFloat(val);
+        entry.light.position.y = entry.y;
+        renderCustomLightsList();
+      }
+    }
+
+    // --- RAYCASTING E ARRASTE DE LUZES NO PALCO 3D ---
+    function setupRaycastingInteractions() {
+      const dom = renderer.domElement;
+
+      dom.addEventListener('pointerdown', (e) => {
+        // Se clicar na UI, ignora
+        if (e.target.closest('#sidebar-master') || e.target.closest('header')) return;
+
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+
+        // Verifica colisão com os gizmos das luzes
+        const gizmos = customLights.map(l => l.gizmo);
+        const intersects = raycaster.intersectObjects(gizmos, true);
+
+        if (intersects.length > 0) {
+          const hitGizmo = intersects[0].object;
+          const hitLightId = hitGizmo.userData.lightId;
+          const found = customLights.find(l => l.id === hitLightId);
+          if (found) {
+            selectedLight = found;
+            isDraggingLight = true;
+            controls.enabled = false;
+            dragPlane.constant = -found.light.position.y;
+            renderCustomLightsList();
+          }
+        }
+      });
+
+      dom.addEventListener('pointermove', (e) => {
+        if (!isDraggingLight || !selectedLight) return;
+
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersectPoint = new THREE.Vector3();
+        if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
+          const clampLimit = 8.5;
+          selectedLight.light.position.x = Math.max(-clampLimit, Math.min(clampLimit, intersectPoint.x));
+          selectedLight.light.position.z = Math.max(-clampLimit, Math.min(clampLimit, intersectPoint.z));
+        }
+      });
+
+      window.addEventListener('pointerup', () => {
+        if (isDraggingLight) {
+          isDraggingLight = false;
+          controls.enabled = true;
+        }
+      });
+    }
+
+    // --- POPULAR PRESETS NO ATLAS HZ (FASE B) ---
+    function populateAtlasPresets() {
+      const grid = document.getElementById('atlas-presets-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const filter = STUDIO_STATE.activePresetFilter;
+      const filtered = CYMATICS_PRESETS.filter(p => {
+        if (filter === 'todos') return true;
+        return p.categoria === filter;
+      });
+
+      document.getElementById('atlas-count-badge').innerText = `${filtered.length} presets`;
+
+      filtered.forEach(p => {
+        const btn = document.createElement('div');
+        const isCurrent = STUDIO_STATE.currentHz === p.hz;
+        btn.className = `preset-pill ${isCurrent ? 'active' : ''}`;
+        btn.onclick = () => selectAtlasPreset(p, true);
+        btn.innerHTML = `
+          <div class="text-[9px] font-black font-mono text-white">${p.hz.toFixed(1)} Hz</div>
+          <div class="text-[7px] text-[#d4af37] truncate px-0.5">${p.nomeDoDesenho.split(' / ')[0]}</div>
+          <div class="text-[6px] text-gray-400 font-mono">m=${p.m}, n=${p.n} • ${p.simetriaAgua}-fold</div>
+        `;
+        grid.appendChild(btn);
+      });
+    }
+
+    function filterAtlasPresets(category, tagEl) {
+      STUDIO_STATE.activePresetFilter = category;
+      document.querySelectorAll('.atlas-cat-tag').forEach(t => t.classList.remove('active'));
+      if (tagEl) tagEl.classList.add('active');
+      populateAtlasPresets();
+    }
+
+    async function selectAtlasPreset(preset, triggerSound = true) {
+      STUDIO_STATE.currentHz = preset.hz;
+      STUDIO_STATE.manualHz = 0;
+      STUDIO_STATE.activePreset = preset;
+
+      document.getElementById('hud-hz-value').innerText = preset.hz.toFixed(1);
+      document.getElementById('hud-pattern-name').innerText = preset.nomeDoDesenho;
+      document.getElementById('hud-mode-mn').innerText = `m=${preset.m}, n=${preset.n} (${preset.simetriaAgua}-fold)`;
+      document.getElementById('slider-manual-hz').value = preset.hz;
+      document.getElementById('lbl-atlas-manual-hz').innerText = `${preset.hz.toFixed(1)} Hz`;
+
+      // Atualiza visual ativo nos botões
+      document.querySelectorAll('.preset-pill').forEach(el => {
+        el.classList.toggle('active', el.innerText.includes(`${preset.hz.toFixed(1)} Hz`));
+      });
+
+      // Se o usuário clicou no preset (triggerSound = true): TOCA O SOM DA FREQUÊNCIA IMEDIATAMENTE!
+      if (triggerSound) {
+        await AudioEngine.init();
+        if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
+          await AudioEngine.ctx.resume();
+        }
+        await AudioEngine.startOscillator(preset.hz, 0.45, 0.2);
+        updateOscillatorBtnState(true);
+        updateHUDSourceBadge(`Oscilador ${Math.round(preset.hz)} Hz`, true);
+      }
+    }
+
+    // --- CONTROLES DE ÁUDIO & MIXER (FASE B) ---
+    async function toggleMicInput() {
+      const btn = document.getElementById('btn-input-mic');
+      const micLabel = document.getElementById('mic-label');
+      const statusBox = document.getElementById('audio-source-status');
+      const statusText = document.getElementById('audio-status-text');
+
+      if (AudioEngine.currentSourceType === 'mic') {
+        AudioEngine.stopMic();
+        btn.classList.remove('border-cyan-400', 'bg-cyan-500/20');
+        micLabel.innerText = "Microfone";
+        statusBox.classList.add('hidden');
+        updateHUDSourceBadge("Ressonância Acústica", false);
+      } else {
+        const ok = await AudioEngine.startMic();
+        if (ok) {
+          btn.classList.add('border-cyan-400', 'bg-cyan-500/20');
+          micLabel.innerText = "Mic Ativo";
+          statusBox.classList.remove('hidden');
+          statusText.innerText = "Microfone Ativo (Captação Direta)";
+          updateHUDSourceBadge("Microfone Ao Vivo", true);
+          document.getElementById('audio-player-card').classList.add('hidden');
+          updateOscillatorBtnState(false);
+        } else {
+          alert("Não foi possível acessar o microfone. Verifique as permissões no navegador.");
+        }
+      }
+    }
+
+    async function handleAudioUpload(e) {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      const playlist = await AudioEngine.loadFiles(files);
+      renderPlaylistUI(playlist);
+
+      // Exibe player card e status
+      document.getElementById('audio-player-card').classList.remove('hidden');
+      const statusBox = document.getElementById('audio-source-status');
+      statusBox.classList.remove('hidden');
+      document.getElementById('audio-status-text').innerText = "Player de Áudio Ativo";
+
+      // Toca a primeira faixa carregada
+      if (playlist.length > 0) {
+        await AudioEngine.playTrack(AudioEngine.currentTrackIndex === -1 ? 0 : AudioEngine.currentTrackIndex);
+        updateAudioTrackDisplay();
+      }
+    }
+
+    function renderPlaylistUI(playlist) {
+      const container = document.getElementById('audio-playlist-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      playlist.forEach((track, idx) => {
+        const isCurrent = AudioEngine.currentTrackIndex === idx;
+        const row = document.createElement('div');
+        row.className = `track-row p-1.5 rounded-lg flex items-center justify-between text-[8px] cursor-pointer ${isCurrent ? 'active' : ''}`;
+        row.onclick = () => {
+          AudioEngine.playTrack(idx);
+          updateAudioTrackDisplay();
+        };
+
+        row.innerHTML = `
+          <div class="truncate pr-2 font-mono flex items-center gap-1.5">
+            <span class="text-cyan-400">${idx + 1}.</span>
+            <span class="text-gray-200 truncate">${track.name}</span>
+          </div>
+          <span class="text-[7px] font-bold uppercase ${isCurrent ? 'text-cyan-400' : 'text-gray-500'}">
+            ${isCurrent ? '▶ Toca' : 'Ouvir'}
+          </span>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function toggleFilePlayback() {
+      if (AudioEngine.playlist.length === 0) return;
+      const targetIndex = AudioEngine.currentTrackIndex === -1 ? 0 : AudioEngine.currentTrackIndex;
+      AudioEngine.playTrack(targetIndex);
+      updateAudioTrackDisplay();
+    }
+
+    function stopFilePlayback() {
+      AudioEngine.stopPlayback(false);
+      onAudioPlaybackPaused();
+    }
+
+    function onAudioPlaybackStarted() {
+      const playBtn = document.getElementById('btn-player-play');
+      if (playBtn) playBtn.innerText = "⏸";
+      updateHUDSourceBadge("Música / Player", true);
+      document.getElementById('btn-input-mic').classList.remove('border-cyan-400', 'bg-cyan-500/20');
+      document.getElementById('mic-label').innerText = "Microfone";
+      updateOscillatorBtnState(false);
+    }
+
+    function onAudioPlaybackPaused() {
+      const playBtn = document.getElementById('btn-player-play');
+      if (playBtn) playBtn.innerText = "▶";
+      updateHUDSourceBadge("Áudio Pausado", false);
+    }
+
+    function onAudioTrackChanged() {
+      updateAudioTrackDisplay();
+    }
+
+    function updateAudioTrackDisplay() {
+      const track = AudioEngine.playlist[AudioEngine.currentTrackIndex];
+      if (track) {
+        document.getElementById('player-track-name').innerText = track.name;
+      }
+      renderPlaylistUI(AudioEngine.playlist);
+    }
+
+    function stopAllAudioSources() {
+      AudioEngine.stopMic();
+      AudioEngine.stopPlayback(true);
+      AudioEngine.fadeOscillator(0, 0.2);
+      document.getElementById('btn-input-mic').classList.remove('border-cyan-400', 'bg-cyan-500/20');
+      document.getElementById('mic-label').innerText = "Microfone";
+      document.getElementById('audio-source-status').classList.add('hidden');
+      document.getElementById('audio-player-card').classList.add('hidden');
+      updateOscillatorBtnState(false);
+      updateHUDSourceBadge("Ressonância Acústica", false);
+    }
+
+    function updateHUDSourceBadge(text, activePulse = true) {
+      document.getElementById('hud-source-badge').innerText = text;
+      const led = document.getElementById('hud-source-led');
+      if (activePulse) {
+        led.className = "w-2 h-2 rounded-full bg-cyan-400 animate-pulse";
+      } else {
+        led.className = "w-2 h-2 rounded-full bg-gray-500";
+      }
+    }
+
+    // --- OSCILADOR SENOIDAL INTERNO (FASE B) ---
+    async function toggleInternalOscillator() {
+      const btn = document.getElementById('btn-toggle-osc');
+      if (AudioEngine.isOscillatorActive) {
+        AudioEngine.fadeOscillator(0, 0.35);
+        updateOscillatorBtnState(false);
+        updateHUDSourceBadge("Ressonância Acústica", false);
+      } else {
+        const targetHz = STUDIO_STATE.manualHz > 0 ? STUDIO_STATE.manualHz : (STUDIO_STATE.currentHz || 432);
+        await AudioEngine.startOscillator(targetHz, 0.45, 0.5);
+        updateOscillatorBtnState(true);
+        updateHUDSourceBadge(`Oscilador ${Math.round(targetHz)} Hz`, true);
+        document.getElementById('btn-input-mic').classList.remove('border-cyan-400', 'bg-cyan-500/20');
+        document.getElementById('mic-label').innerText = "Microfone";
+      }
+    }
+
+    function updateOscillatorBtnState(isActive) {
+      const btn = document.getElementById('btn-toggle-osc');
+      if (!btn) return;
+      if (isActive) {
+        btn.innerText = "Som: Ativo";
+        btn.className = "px-2.5 py-1 rounded-lg bg-amber-500 text-black font-black uppercase text-[8px] tracking-wider shadow-[0_0_14px_#d4af37] transition-all";
+      } else {
+        btn.innerText = "Ativar Som";
+        btn.className = "px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-[#d4af37] text-[8px] font-black uppercase tracking-wider transition-all";
+      }
+    }
+
+    function setManualHz(val) {
+      const hz = parseFloat(val);
+      STUDIO_STATE.manualHz = hz;
+      STUDIO_STATE.currentHz = hz;
+      document.getElementById('lbl-atlas-manual-hz').innerText = `${hz} Hz`;
+      
+      if (hz > 0) {
+        document.getElementById('hud-hz-value').innerText = hz;
+        document.getElementById('hud-pattern-name').innerText = "Frequência Manual Sintetizada";
+        
+        // Estima modos (m, n) pela Lei de Chladni f ≈ 11.89(m + 2n)^2
+        const root = Math.sqrt(hz / 11.89);
+        const m = Math.max(1, Math.round(root) % 6 + 1);
+        const n = Math.max(0, Math.floor(root / 2));
+        const sim = Math.max(2, m * 2);
+        document.getElementById('hud-mode-mn').innerText = `m=${m}, n=${n} (${sim}-fold)`;
+
+        if (AudioEngine.isOscillatorActive) {
+          AudioEngine.setOscillatorFrequency(hz, 0.04);
+        }
+      }
+    }
+
+    function updateAudioParam(param, val) {
+      if (param === 'volume') {
+        STUDIO_STATE.volume = val / 100;
+        document.getElementById('lbl-master-vol').innerText = `${val}%`;
+        AudioEngine.setVolume(STUDIO_STATE.volume);
+      } else if (param === 'filterHz') {
+        STUDIO_STATE.filterHz = parseFloat(val);
+        document.getElementById('lbl-filter-hz').innerText = `${val} Hz`;
+        AudioEngine.setFilter(STUDIO_STATE.filterActive, STUDIO_STATE.filterHz);
+      } else if (param === 'filterActive') {
+        STUDIO_STATE.filterActive = val;
+        AudioEngine.setFilter(STUDIO_STATE.filterActive, STUDIO_STATE.filterHz);
+      }
+    }
+
+    function updatePhysicsParam(param, val) {
+      if (param === 'gain') {
+        STUDIO_STATE.gain = parseFloat(val);
+        document.getElementById('lbl-physics-gain').innerText = val;
+      } else if (param === 'viscosity') {
+        STUDIO_STATE.viscosity = parseFloat(val);
+        document.getElementById('lbl-physics-visc').innerText = Number(val).toFixed(3);
+      }
+    }
+
+    function togglePhysicsToggle(type, btn) {
+      STUDIO_STATE[type] = !STUDIO_STATE[type];
+      btn.classList.toggle('border-cyan-400', STUDIO_STATE[type]);
+      btn.classList.toggle('text-cyan-400', STUDIO_STATE[type]);
+    }
+
+    // --- SISTEMA DE 33 RAIOS GEOMÉTRICOS & COREOGRAFIAS ---
+    function setupRayLights() {
+      while (rayLightsGroup.children.length > 0) {
+        rayLightsGroup.remove(rayLightsGroup.children[0]);
+      }
+      rayLightsPool.length = 0;
+
+      for (let i = 0; i < RAY_MAX; i++) {
+        const pLight = new THREE.PointLight(0x00d2ff, 0, 16, 2.0);
+        const sphereGizmo = new THREE.Mesh(
+          new THREE.SphereGeometry(0.08, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x00d2ff })
+        );
+        pLight.add(sphereGizmo);
+        pLight.visible = false;
+        rayLightsGroup.add(pLight);
+        rayLightsPool.push({ light: pLight, gizmo: sphereGizmo });
+      }
+      rayLightsGroup.visible = false;
+    }
+
+    function updateRayCount(count) {
+      STUDIO_STATE.rayCount = parseInt(count);
+      const lbl = document.getElementById('lbl-ray-count');
+      if (lbl) lbl.innerText = `${count} raios`;
+    }
+
+    function updateRayParam(param, val) {
+      if (param === 'dist') {
+        STUDIO_STATE.rayDistance = val / 100;
+        const lbl = document.getElementById('lbl-ray-dist');
+        if (lbl) lbl.innerText = `${val}%`;
+      } else if (param === 'intensity') {
+        STUDIO_STATE.rayIntensity = parseFloat(val);
+        const lbl = document.getElementById('lbl-ray-int');
+        if (lbl) lbl.innerText = val;
+      } else if (param === 'speed') {
+        STUDIO_STATE.raySpeed = parseFloat(val);
+      }
+    }
+
+    function toggleRayMode(mode, btn) {
+      STUDIO_STATE.rayModes[mode] = !STUDIO_STATE.rayModes[mode];
+      btn.classList.toggle('border-cyan-400', STUDIO_STATE.rayModes[mode]);
+      btn.classList.toggle('text-cyan-400', STUDIO_STATE.rayModes[mode]);
+    }
+
+    function updateRayLights(elapsedTime, audioState, activeHz) {
+      const count = STUDIO_STATE.rayCount;
+      if (count === 0) {
+        rayLightsGroup.visible = false;
+        return;
+      }
+      rayLightsGroup.visible = true;
+
+      const modes = STUDIO_STATE.rayModes;
+      const baseRadius = 10.0 * (STUDIO_STATE.rayDistance || 0.55);
+      const speed = STUDIO_STATE.raySpeed || 1.0;
+      const intensity = (STUDIO_STATE.rayIntensity || 50) * (0.6 + audioState.volume * 0.8);
+      const yHeight = 1.6;
+
+      for (let i = 0; i < RAY_MAX; i++) {
+        const rayObj = rayLightsPool[i];
+        if (i >= count) {
+          rayObj.light.visible = false;
+          continue;
+        }
+        rayObj.light.visible = true;
+
+        let baseAngle = (i / count) * Math.PI * 2;
+        let curAngle = baseAngle;
+        let curRadius = baseRadius;
+
+        // 1. Girar
+        if (modes.rotate) {
+          curAngle += elapsedTime * 0.9 * speed;
+        }
+
+        // 2. Pulsar
+        if (modes.pulse) {
+          curRadius *= (1.0 + 0.35 * Math.sin(elapsedTime * 4.0 * speed + i * 0.25) * (audioState.volume + 0.3));
+        }
+
+        // 3. 8 Loop (Lissajous)
+        let x, z;
+        if (modes.ray8) {
+          const t = elapsedTime * 0.8 * speed + baseAngle;
+          x = curRadius * Math.cos(t);
+          z = curRadius * Math.sin(2 * t) * 0.5;
+        } else if (modes.vortex) {
+          // 4. Vortex (Espiral logarítmica)
+          const vT = (elapsedTime * 0.6 * speed + (i / count) * 4.0) % 4.0;
+          const spiralR = curRadius * (0.25 + 0.75 * (vT / 4.0));
+          const spiralA = curAngle + vT * 2.5;
+          x = spiralR * Math.cos(spiralA);
+          z = spiralR * Math.sin(spiralA);
+        } else if (modes.hypno) {
+          // 10. Espiral Hipno (anéis contra-rotantes)
+          const dir = (i % 2 === 0) ? 1 : -1;
+          const hAngle = baseAngle + elapsedTime * 1.2 * speed * dir;
+          const hRad = (i % 2 === 0) ? curRadius : curRadius * 0.62;
+          x = hRad * Math.cos(hAngle);
+          z = hRad * Math.sin(hAngle);
+        } else {
+          x = curRadius * Math.cos(curAngle);
+          z = curRadius * Math.sin(curAngle);
+        }
+
+        // 5. Salto (Jump nos picos de energia)
+        if (modes.jump && audioState.energyPeak) {
+          curRadius *= 1.35;
+        }
+
+        // 9. Flash Reto (Oscilação radial direta)
+        if (modes.straight) {
+          const sFactor = Math.abs(Math.sin(elapsedTime * 3.0 * speed + i));
+          x *= sFactor;
+          z *= sFactor;
+        }
+
+        // 11. Inverter
+        if (modes.invert) {
+          x = -x;
+          z = -z;
+        }
+
+        rayObj.light.position.set(x, yHeight, z);
+        rayObj.light.intensity = intensity;
+
+        // Cores dos raios
+        let lightCol = new THREE.Color(0x00d2ff);
+        if (modes.rainbow) {
+          const hue = (i / count + elapsedTime * 0.15 * speed) % 1.0;
+          lightCol.setHSL(hue, 0.95, 0.55);
+        } else if (modes.hzColor) {
+          if (activeHz < 150) {
+            lightCol.setHSL(0.0 + (activeHz / 150) * 0.12, 1.0, 0.5); // Vermelho / Âmbar
+          } else if (activeHz < 800) {
+            lightCol.setHSL(0.35 + ((activeHz - 150) / 650) * 0.25, 1.0, 0.5); // Verde / Ciano
+          } else {
+            lightCol.setHSL(0.65 + ((activeHz - 800) / 1200) * 0.25, 1.0, 0.55); // Azul / Violeta
+          }
+        } else if (modes.cycle) {
+          const cycleHue = (elapsedTime * 0.1 * speed) % 1.0;
+          lightCol.setHSL(cycleHue, 0.9, 0.55);
+        } else if (modes.kaleido) {
+          const quadHue = ((Math.floor(i / Math.max(1, count / 4))) * 0.25) % 1.0;
+          lightCol.setHSL(quadHue, 0.9, 0.5);
+        }
+
+        rayObj.light.color.copy(lightCol);
+        rayObj.gizmo.material.color.copy(lightCol);
+      }
+    }
+
+    // --- MESA 2: DISPERSÃO & CINEMÁTICA DE 25.000 MICROGRÃOS DE AREIA DE CHLADNI ---
+    function scatterChladniSand() {
+      if (!sandPositions) return;
+      const half = 8.5;
+      for (let i = 0; i < SAND_COUNT; i++) {
+        sandPositions[i * 3] = (Math.random() * 2 - 1) * half;
+        sandPositions[i * 3 + 1] = 0.04;
+        sandPositions[i * 3 + 2] = (Math.random() * 2 - 1) * half;
+        sandVelocities[i * 2] = 0.0;
+        sandVelocities[i * 2 + 1] = 0.0;
+      }
+      if (sandGeometry) {
+        sandGeometry.attributes.position.needsUpdate = true;
+      }
+      console.log("[Chladni] 25.000 microgrãos espalhados na placa (Prontos para migração nodal)");
+    }
+
+    function updateSandPhysics(effectiveHz, activeAmp, delta) {
+      if (!sandPoints || !sandPoints.visible || !sandPositions) return;
+
+      const preset = STUDIO_STATE.activePreset;
+      const m = preset ? preset.m : (Math.max(1, Math.round(Math.sqrt(effectiveHz / 12)) % 6 + 1));
+      const n = preset ? preset.n : (Math.max(0, Math.floor(Math.sqrt(effectiveHz / 12) / 2)));
+      const coefA = preset ? preset.coefA : 1.0;
+      const coefB = preset ? preset.coefB : -1.0;
+
+      const halfSize = 8.8;
+      const beta = 1.8;
+      const alpha = 0.45;
+      const deltaCoord = 0.04;
+
+      const posArr = sandPositions;
+      const velArr = sandVelocities;
+
+      // Se nenhum áudio/som ativo, os grãos travam estritamente no lugar (repouso absoluto)
+      if (activeAmp < 0.0005) {
+        return;
+      }
+
+      for (let i = 0; i < SAND_COUNT; i++) {
+        const idx3 = i * 3;
+        const idx2 = i * 2;
+
+        let px = posArr[idx3];
+        let pz = posArr[idx3 + 2];
+
+        // Coordenadas normalizadas em [-PI, PI]
+        const sx = (px / halfSize) * Math.PI;
+        const sz = (pz / halfSize) * Math.PI;
+
+        // Autofunção de Chladni u(sx, sz)
+        const u = coefA * Math.cos(n * sx) * Math.cos(m * sz) + coefB * Math.cos(m * sx) * Math.cos(n * sz);
+        const absU = Math.abs(u);
+
+        // Aceleração de pico adimensional Gamma = |u| * omega^2 * A / g
+        const Gamma = (absU * activeAmp * 125.0);
+
+        // Probabilidade de salto estocástico P_hop = max(0, 1 - exp(-beta * (Gamma - 1.0)))
+        let Phop = 0.0;
+        if (Gamma > 1.0) {
+          Phop = Math.min(1.0, 1.0 - Math.exp(-beta * (Gamma - 1.0)));
+        }
+
+        // REGRA DE OURO: TRAVAMENTO ESTÁTICO ESTRITO
+        // Quando Gamma < 1.0 OU na vizinhança imediata da linha nodal (|u| < 0.018):
+        // Phop = 0 e a velocidade é ZERADA por atrito estático! Grãos travam sem tremer.
+        if (Gamma < 1.0 || absU < 0.018) {
+          velArr[idx2] = 0.0;
+          velArr[idx2 + 1] = 0.0;
+          posArr[idx3 + 1] = 0.04; // repouso sobre a chapa
+          continue;
+        }
+
+        // Gradiente de |u| via diferenças finitas para força acústica de deriva
+        const sx_dx = ((px + deltaCoord) / halfSize) * Math.PI;
+        const sz_dz = ((pz + deltaCoord) / halfSize) * Math.PI;
+
+        const u_dx = coefA * Math.cos(n * sx_dx) * Math.cos(m * sz) + coefB * Math.cos(m * sx_dx) * Math.cos(n * sz);
+        const u_dz = coefA * Math.cos(n * sx) * Math.cos(m * sz_dz) + coefB * Math.cos(m * sx) * Math.cos(n * sz_dz);
+
+        const gradX = (Math.abs(u_dx) - absU) / deltaCoord;
+        const gradZ = (Math.abs(u_dz) - absU) / deltaCoord;
+
+        // Força acústica de radiação: F_ac = -2 * alpha * |u| * grad(|u|)
+        const FacX = -2.0 * alpha * absU * gradX;
+        const FacZ = -2.0 * alpha * absU * gradZ;
+
+        // Dinâmica granular com atrito e ruído estocástico proporcional a Phop
+        const noiseX = (Math.random() - 0.5) * Phop * 0.12;
+        const noiseZ = (Math.random() - 0.5) * Phop * 0.12;
+
+        velArr[idx2] = velArr[idx2] * 0.60 + (FacX * 0.28 + noiseX);
+        velArr[idx2 + 1] = velArr[idx2 + 1] * 0.60 + (FacZ * 0.28 + noiseZ);
+
+        px += velArr[idx2];
+        pz += velArr[idx2 + 1];
+
+        // Contorno da placa [-8.5, 8.5]
+        if (px < -8.5) { px = -8.5; velArr[idx2] *= -0.3; }
+        if (px > 8.5) { px = 8.5; velArr[idx2] *= -0.3; }
+        if (pz < -8.5) { pz = -8.5; velArr[idx2 + 1] *= -0.3; }
+        if (pz > 8.5) { pz = 8.5; velArr[idx2 + 1] *= -0.3; }
+
+        posArr[idx3] = px;
+        posArr[idx3 + 2] = pz;
+        posArr[idx3 + 1] = 0.04 + Math.min(0.35, absU * activeAmp * 0.25 * Phop);
+      }
+
+      sandGeometry.attributes.position.needsUpdate = true;
+    }
+
+    function toggleGrazingRing(checked) {
+      STUDIO_STATE.grazingRing = checked;
+      grazingRingGroup.visible = checked;
+    }
+
+    function toggleAIDJ(btn) {
+      STUDIO_STATE.aiDjActive = !STUDIO_STATE.aiDjActive;
+      btn.classList.toggle('bg-cyan-500/20', STUDIO_STATE.aiDjActive);
+      btn.classList.toggle('border-cyan-400', STUDIO_STATE.aiDjActive);
+    }
+
+    function toggleGenerativeFlux(checked) {
+      STUDIO_STATE.generativeFlux = checked;
+      if (dustParticles) {
+        dustParticles.visible = checked;
+      }
+    }
+
+    function toggleLightsAsExciters(checked) {
+      STUDIO_STATE.lightsAsExciters = checked;
+    }
+
+    function applyViscosityNode(val, colorHex, btnEl) {
+      STUDIO_STATE.viscosity = val;
+      const slider = document.getElementById('slider-physics-visc');
+      if (slider) slider.value = Math.round(val * 1000);
+      const lbl = document.getElementById('lbl-physics-visc');
+      if (lbl) lbl.innerText = val.toFixed(3);
+
+      document.querySelectorAll('.node-btn').forEach(btn => {
+        btn.classList.remove('border-cyan-400', 'bg-cyan-500/20');
+      });
+      if (btnEl) {
+        btnEl.classList.add('border-cyan-400', 'bg-cyan-500/20');
+      }
+      const nodeLbl = document.getElementById('lbl-node-active');
+      if (nodeLbl) {
+        nodeLbl.innerText = `${val.toFixed(3)}`;
+        nodeLbl.style.color = colorHex;
+      }
+    }
+
+    function updatePersistence(val) {
+      STUDIO_STATE.persistence = val / 100;
+      document.getElementById('lbl-persistence').innerText = `${val}%`;
+    }
+
+    function updateDustParticles(elapsedTime, audioState) {
+      if (!dustParticles || !dustParticles.visible || !dustPositions) return;
+
+      const isPeak = STUDIO_STATE.aiDjActive && audioState.energyPeak;
+      const count = DUST_COUNT;
+
+      for (let i = 0; i < count; i++) {
+        const idx = i * 3;
+
+        // Movimento orbital suave em vortex
+        let x = dustPositions[idx];
+        let y = dustPositions[idx + 1];
+        let z = dustPositions[idx + 2];
+
+        // Se houver batida com AI DJ ativo: impulso radial explosivo
+        if (isPeak) {
+          dustVelocities[idx] += (x / (Math.abs(x) + 0.1)) * 0.08;
+          dustVelocities[idx + 1] += 0.06;
+          dustVelocities[idx + 2] += (z / (Math.abs(z) + 0.1)) * 0.08;
+        }
+
+        // Amortecimento de velocidade
+        dustVelocities[idx] *= 0.94;
+        dustVelocities[idx + 1] = dustVelocities[idx + 1] * 0.95 + 0.003;
+        dustVelocities[idx + 2] *= 0.94;
+
+        x += dustVelocities[idx];
+        y += dustVelocities[idx + 1];
+        z += dustVelocities[idx + 2];
+
+        // Reinicia partículas no fundo quando sobem demais
+        if (y > 9.0) {
+          y = 0.5;
+          x = (Math.random() * 2 - 1) * 10.0;
+          z = (Math.random() * 2 - 1) * 10.0;
+        }
+
+        dustPositions[idx] = x;
+        dustPositions[idx + 1] = y;
+        dustPositions[idx + 2] = z;
+      }
+
+      dustGeometry.attributes.position.needsUpdate = true;
+    }
+
+    // --- CONTROLE DE MESAS & ASSINATURAS ---
+    function selectMesa(mesaKey) {
+      STUDIO_STATE.activeMesa = mesaKey;
+      
+      document.getElementById('mesa-btn-1').classList.toggle('active', mesaKey === 'water_pure');
+      document.getElementById('mesa-btn-2').classList.toggle('active', mesaKey === 'chladni_sand');
+      document.getElementById('mesa-btn-3').classList.toggle('active', mesaKey === 'fusion_cymatic');
+
+      const labels = {
+        'water_pure': 'Mesa 1: Água Pura',
+        'chladni_sand': 'Mesa 2: Chladni',
+        'fusion_cymatic': 'Mesa 3: Fusão Híbrida'
+      };
+      document.getElementById('hud-mesa-badge').innerText = labels[mesaKey];
+
+      const chladniSec = document.getElementById('section-chladni-actions');
+      if (chladniSec) {
+        chladniSec.classList.toggle('hidden', mesaKey !== 'chladni_sand' && mesaKey !== 'fusion_cymatic');
+      }
+
+      if (sandPoints) {
+        sandPoints.visible = (mesaKey === 'chladni_sand' || mesaKey === 'fusion_cymatic');
+      }
+
+      if (mesaKey === 'chladni_sand') {
+        baseMaterial.metalness = 0.88;
+        baseMaterial.roughness = 0.25;
+        baseMaterial.color.setHex(0x111318);
+        baseMaterial.emissiveIntensity = 0.0;
+      } else {
+        setSurfaceFinish(STUDIO_STATE.surfaceFinish);
+      }
+    }
+
+    function applySignature(sigKey, btnEl) {
+      STUDIO_STATE.activeSignature = sigKey;
+      document.querySelectorAll('.sig-btn').forEach(btn => btn.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+
+      if (sigKey === 'sig_cimatic3') {
+        // CIMATIC 3: Visual Perfeito - Espelho Negro absoluto, Mesa 1, anel rasante
+        selectMesa('water_pure');
+        setSurfaceFinish('mirror');
+        STUDIO_STATE.mercury = false;
+        STUDIO_STATE.grazingRing = true;
+        grazingRingGroup.visible = true;
+        document.getElementById('chk-grazing-ring').checked = true;
+        updateRayCount(0);
+        document.getElementById('slider-ray-count').value = 0;
+        applyViscosityNode(0.965, '#00ffff');
+        updatePersistence(15);
+        document.getElementById('slider-persistence').value = 15;
+      } else if (sigKey === 'sig_cimatic4') {
+        // CIMATIC 4: Mesa Top Luz Fraca - Luz Suave, preset Solfeggio 432 Hz
+        selectMesa('water_pure');
+        setSurfaceFinish('soft');
+        STUDIO_STATE.grazingRing = true;
+        grazingRingGroup.visible = true;
+        document.getElementById('chk-grazing-ring').checked = true;
+        updateRayCount(0);
+        document.getElementById('slider-ray-count').value = 0;
+        setManualHz(432);
+        applyViscosityNode(0.970, '#00ffff');
+      } else if (sigKey === 'sig_cimatic6') {
+        // CIMATIC 6: DJ Mode - 12 raios giratórios, AI DJ ativo, Beat Sync, Partículas Additive
+        selectMesa('water_pure');
+        setSurfaceFinish('mirror');
+        STUDIO_STATE.aiDjActive = true;
+        const djBtn = document.getElementById('btn-ai-dj');
+        if (djBtn) {
+          djBtn.classList.add('bg-cyan-500/20', 'border-cyan-400');
+        }
+        STUDIO_STATE.rayModes.rotate = true;
+        STUDIO_STATE.rayModes.rainbow = true;
+        updateRayCount(12);
+        document.getElementById('slider-ray-count').value = 12;
+        toggleGenerativeFlux(true);
+        const fluxChk = document.getElementById('chk-gen-flux');
+        if (fluxChk) fluxChk.checked = true;
+      } else if (sigKey === 'sig_fluid') {
+        // ÁGUA FLUIDA: Alta viscosidade contínua, persistência 35%, dinâmica suave
+        selectMesa('water_pure');
+        setSurfaceFinish('mirror');
+        STUDIO_STATE.mercury = false;
+        applyViscosityNode(0.980, '#0066ff');
+        updatePersistence(35);
+        document.getElementById('slider-persistence').value = 35;
+      }
+    }
+
+    function setSurfaceFinish(finishKey) {
+      STUDIO_STATE.surfaceFinish = finishKey;
+      document.getElementById('opt-finish-mirror').classList.toggle('border-cyan-400', finishKey === 'mirror');
+      document.getElementById('opt-finish-mirror').classList.toggle('text-cyan-400', finishKey === 'mirror');
+      document.getElementById('opt-finish-soft').classList.toggle('border-cyan-400', finishKey === 'soft');
+      document.getElementById('opt-finish-soft').classList.toggle('text-cyan-400', finishKey === 'soft');
+      document.getElementById('opt-finish-anuhazi').classList.toggle('border-cyan-400', finishKey === 'anuhazi');
+      document.getElementById('opt-finish-anuhazi').classList.toggle('text-cyan-400', finishKey === 'anuhazi');
+
+      if (finishKey === 'mirror') {
+        baseMaterial.color.setHex(0x020305);
+        baseMaterial.metalness = STUDIO_STATE.mercury ? 0.98 : 0.04;
+        baseMaterial.roughness = 0.035;
+        baseMaterial.emissive.setHex(0x000000);
+        baseMaterial.emissiveIntensity = 0.0;
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.toneMappingExposure = 1.0;
+      } else if (finishKey === 'soft') {
+        baseMaterial.color.setHex(0x080812);
+        baseMaterial.metalness = 0.65;
+        baseMaterial.roughness = 0.18;
+        baseMaterial.emissive.setHex(0x000000);
+        baseMaterial.emissiveIntensity = 0.0;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+      } else if (finishKey === 'anuhazi') {
+        baseMaterial.color.setHex(0x0a0414);
+        baseMaterial.metalness = 0.90;
+        baseMaterial.roughness = 0.10;
+        baseMaterial.emissive.setHex(0x1a062b);
+        baseMaterial.emissiveIntensity = 0.35;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+      }
+    }
+
+    // --- CONTROLE DE CÂMERA E FULLSCREEN ---
+    let targetCameraPos = new THREE.Vector3(0, 18, 22);
+    let isTransitioningCamera = false;
+
+    function toggleCameraView() {
+      STUDIO_STATE.isTopView = !STUDIO_STATE.isTopView;
+      const label = document.getElementById('cam-label');
+
+      if (STUDIO_STATE.isTopView) {
+        label.innerText = "Câmera Zenital";
+        targetCameraPos.set(0, 24, 0.001);
+      } else {
+        label.innerText = "Câmera 3D";
+        targetCameraPos.set(0, 18, 22);
+      }
+      isTransitioningCamera = true;
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar-master');
+      STUDIO_STATE.sidebarVisible = !STUDIO_STATE.sidebarVisible;
+      if (STUDIO_STATE.sidebarVisible) {
+        sidebar.style.transform = 'translateX(0)';
+      } else {
+        sidebar.style.transform = 'translateX(120%)';
+      }
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // --- ACORDEÃO DA SIDEBAR (MODAIS CONTEXTUAIS AUTO-RECOLHÍVEIS) ---
+    function toggleDrawer(drawerId, triggerBtn) {
+      const allContents = document.querySelectorAll('.drawer-content');
+      const allTriggers = document.querySelectorAll('.drawer-trigger');
+      const targetContent = document.getElementById(drawerId);
+      const isAlreadyOpen = targetContent.classList.contains('open');
+
+      allContents.forEach(el => el.classList.remove('open'));
+      allTriggers.forEach(el => el.classList.remove('open'));
+
+      if (!isAlreadyOpen) {
+        targetContent.classList.add('open');
+        triggerBtn.classList.add('open');
+      }
+    }
+
+    // --- MODO SESSÃO IMERSIVA ---
+    let sessionInterval = null;
+    let sessionSeconds = 900;
+
+    function startSession() {
+      STUDIO_STATE.isSessionActive = true;
+      const overlay = document.getElementById('session-overlay');
+      overlay.style.display = 'flex';
+
+      sessionSeconds = 900;
+      updateSessionDisplay();
+      if (sessionInterval) clearInterval(sessionInterval);
+      sessionInterval = setInterval(() => {
+        if (sessionSeconds > 0) {
+          sessionSeconds--;
+          updateSessionDisplay();
+        } else {
+          exitSession();
+        }
+      }, 1000);
+    }
+
+    function exitSession() {
+      STUDIO_STATE.isSessionActive = false;
+      const overlay = document.getElementById('session-overlay');
+      overlay.style.display = 'none';
+      if (sessionInterval) {
+        clearInterval(sessionInterval);
+        sessionInterval = null;
+      }
+    }
+
+    function updateSessionDisplay() {
+      const m = Math.floor(sessionSeconds / 60).toString().padStart(2, '0');
+      const s = (sessionSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('session-timer-display').innerText = `${m}:${s}`;
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // --- LOOP PRINCIPAL DE ANIMAÇÃO 3D & TELEMETRIA AUDIOMÉTRICA (FASE B) ---
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = clock.getDelta();
+      const elapsedTime = clock.getElapsedTime();
+
+      // Atualiza o motor Web Audio API a cada frame
+      const audioState = AudioEngine.updateAnalysis(elapsedTime);
+
+      // Atualiza HUD de Estabilidade e Frequências
+      const stabPercent = Math.round(audioState.stability * 100);
+      document.getElementById('hud-stability-val').innerText = `${stabPercent}%`;
+      const stabLed = document.getElementById('hud-stability-led');
+      if (audioState.stability > 0.70) {
+        stabLed.style.backgroundColor = '#34d399';
+        stabLed.style.boxShadow = '0 0 8px #34d399';
+      } else if (audioState.stability > 0.35) {
+        stabLed.style.backgroundColor = '#fbbf24';
+        stabLed.style.boxShadow = '0 0 8px #fbbf24';
+      } else {
+        stabLed.style.backgroundColor = 'rgba(239, 68, 68, 0.5)';
+        stabLed.style.boxShadow = 'none';
+      }
+
+      // Leitura dupla FFT Dominante vs Pitch Autocorrelação no HUD
+      document.getElementById('hud-fft-hz').innerText = `${Math.round(audioState.dominantHz)} Hz`;
+      document.getElementById('hud-pitch-hz').innerText = audioState.pitchHz > 20 ? `${Math.round(audioState.pitchHz)} Hz` : '--';
+
+      // Se a fonte for Mic ou Arquivo, atualiza valor central do HUD
+      if (AudioEngine.currentSourceType === 'mic' || AudioEngine.currentSourceType === 'file') {
+        const liveHz = audioState.pitchHz > 20 ? Math.round(audioState.pitchHz) : Math.round(audioState.dominantHz);
+        if (liveHz > 15) {
+          document.getElementById('hud-hz-value').innerText = liveHz;
+          STUDIO_STATE.currentHz = liveHz;
+        }
+      }
+
+      // Detector de Batida / Beat Sync LED (energyPeak)
+      const beatLed = document.getElementById('beat-led');
+      if (audioState.energyPeak) {
+        beatLed.style.backgroundColor = '#00d2ff';
+        beatLed.style.borderColor = '#ffffff';
+        beatLed.style.boxShadow = '0 0 16px #00d2ff';
+        beatLed.style.transform = 'scale(1.4)';
+
+        // Se AI Visual DJ estiver ativo, reage nos picos de batida
+        if (STUDIO_STATE.aiDjActive) {
+          if (customLights.length > 0) {
+            const l = customLights[Math.floor(Math.random() * customLights.length)];
+            l.light.intensity = 120;
+          }
+        }
+      } else {
+        beatLed.style.backgroundColor = 'rgba(0, 210, 255, 0.2)';
+        beatLed.style.borderColor = 'rgba(0, 210, 255, 0.4)';
+        beatLed.style.boxShadow = 'none';
+        beatLed.style.transform = 'scale(1.0)';
+      }
+
+      // Transição suave da câmera ao alternar Topo / 3D
+      if (isTransitioningCamera) {
+        camera.position.lerp(targetCameraPos, 0.08);
+        controls.target.lerp(new THREE.Vector3(0, 0, 0), 0.08);
+        if (camera.position.distanceTo(targetCameraPos) < 0.1) {
+          camera.position.copy(targetCameraPos);
+          isTransitioningCamera = false;
+        }
+      }
+
+      controls.update();
+
+      // Deformação da Malha 3D pelo Motor Acústico
+      const pos = baseGeometry.attributes.position.array;
+      const count = pos.length / 3;
+      const timeScale = elapsedTime * 3.5;
+
+      // Frequência e amplitude ativas
+      let activeHz = STUDIO_STATE.manualHz > 0 ? STUDIO_STATE.manualHz : STUDIO_STATE.currentHz;
+      if (AudioEngine.currentSourceType === 'mic' || AudioEngine.currentSourceType === 'file') {
+        activeHz = audioState.pitchHz > 20 ? audioState.pitchHz : (audioState.dominantHz > 20 ? audioState.dominantHz : activeHz);
+      }
+      activeHz = Math.max(15, activeHz);
+
+      // Amplitude proporcional ao envelope de áudio e ganho da mesa
+      let activeAmp = audioState.volume * (STUDIO_STATE.gain / 35.0);
+
+      // Se o oscilador senoidal estiver ativo, assegura amplitude visível e nítida!
+      if (AudioEngine.isOscillatorActive) {
+        activeAmp = Math.max(activeAmp, 0.85 * (STUDIO_STATE.gain / 35.0));
+      }
+
+      // Se nenhum áudio estiver tocando e o oscilador estiver desligado,
+      // a superfície retorna perfeitamente ao repouso espelhado plano (silêncio imediato)
+      if (AudioEngine.currentSourceType === null && !AudioEngine.isOscillatorActive && audioState.volume < 0.001) {
+        activeAmp = 0;
+      }
+
+      // Parâmetros modais (m, n) do preset ativo ou calculados
+      const preset = STUDIO_STATE.activePreset;
+      const m = preset ? preset.m : (Math.max(1, Math.round(Math.sqrt(activeHz / 12)) % 6 + 1));
+      const n = preset ? preset.n : (Math.max(0, Math.floor(Math.sqrt(activeHz / 12) / 2)));
+      const coefA = preset ? preset.coefA : 1.0;
+      const coefB = preset ? preset.coefB : -1.0;
+      const sim = preset ? preset.simetriaAgua : Math.max(2, m * 2);
+
+      const k = Math.max(0.4, Math.sqrt(activeHz) * 0.11);
+      const halfSize = 9.0; // Mesa 18x18
+
+      // Atualiza o Sistema de 33 Raios Geométricos
+      updateRayLights(elapsedTime, audioState, activeHz);
+
+      // Atualiza a Cinemática de Areia de Chladni (Mesa 2)
+      updateSandPhysics(activeHz, activeAmp, delta);
+
+      // Atualiza as 4.000 Partículas do Fluxo Generativo (Fase D)
+      updateDustParticles(elapsedTime, audioState);
+
+      // --- DEFORMAÇÃO DA MALHA BASE CONFORME A MESA ATIVA ---
+      const R_cubeta = 8.8;
+      // Constantes físicas do fluido raso do Dossiê Técnico:
+      // nu = 5.50e-5 m²/s, H = 1.50 mm (0.0015 m), rho = 1120 kg/m³
+      const nu = 5.50e-5;
+      const H_fluid = 0.0015;
+      const omega = 2 * Math.PI * activeHz;
+      const sinhVal = Math.max(0.001, Math.sinh(2 * k * H_fluid));
+      const gammaShallow = 2 * nu * k * k + Math.sqrt(nu * omega) / (2 * H_fluid * sinhVal);
+
+      // Resposta sub-harmônica f0/2 de Faraday com termos não-lineares quadrático (c2) e cúbico (c3)
+      const t_f = timeScale * 0.5;
+      const c2 = 0.25;
+      const c3 = 0.12;
+      const faradayHarmonics = Math.cos(t_f) + c2 * Math.cos(2 * t_f) + c3 * Math.cos(3 * t_f);
+
+      for (let i = 0; i < count; i++) {
+        const ox = originalPositions[i * 3];
+        const oz = originalPositions[i * 3 + 2];
+        const r = Math.sqrt(ox * ox + oz * oz);
+        const theta = Math.atan2(oz, ox);
+
+        // SILÊNCIO IMEDIATO: se a amplitude for nula, retorno instantâneo (< 16ms) ao plano z = 0
+        if (activeAmp < 0.0001) {
+          pos[i * 3] = ox;
+          pos[i * 3 + 1] = 0.0;
+          pos[i * 3 + 2] = oz;
+          continue;
+        }
+
+        const sx = (ox / halfSize) * Math.PI;
+        const sz = (oz / halfSize) * Math.PI;
+
+        if (STUDIO_STATE.activeMesa === 'water_pure') {
+          // ========================================================
+          // MESA 1: ÁGUA PURA (CYMASCOPE) - PONTO FOCAL CENTRAL ÚNICO (r = 0)
+          // ========================================================
+          // Onda cilíndrica de Bessel saindo do centro r = 0
+          const J0_direct = Math.cos(k * r) / Math.sqrt(Math.max(1.0, k * r));
+          // Reflexão na borda rígida em r = R_cubeta
+          const distRefl = Math.abs(2 * R_cubeta - r);
+          const J0_refl = Math.cos(k * distRefl) / Math.sqrt(Math.max(1.0, k * distRefl));
+          const radialInterference = J0_direct + 0.85 * J0_refl;
+
+          // Envelope de amortecimento da lâmina rasa de 1.50 mm
+          const dampEnvelope = Math.exp(-gammaShallow * 0.0018 * r);
+          // Simetria azimutal m-fold (pétalas geométricas do CymaScope)
+          const azimuthalMod = Math.cos(sim * theta);
+
+          let waveWater = radialInterference * azimuthalMod * faradayHarmonics * dampEnvelope * activeAmp * 0.65;
+
+          if (STUDIO_STATE.resonance) {
+            waveWater += Math.sin(k * ox * 0.75) * Math.sin(k * oz * 0.45) * 0.15 * activeAmp;
+          }
+
+          if (STUDIO_STATE.mercury) {
+            pos[i * 3] = ox + Math.sin(t_f * 0.6 + r) * 0.06 * activeAmp;
+            pos[i * 3 + 2] = oz + Math.cos(t_f * 0.6 + r) * 0.06 * activeAmp;
+          } else {
+            pos[i * 3] = ox;
+            pos[i * 3 + 2] = oz;
+          }
+
+          pos[i * 3 + 1] = waveWater;
+
+        } else if (STUDIO_STATE.activeMesa === 'chladni_sand') {
+          // ========================================================
+          // MESA 2: PLACA DE CHLADNI (VIBRAÇÃO MODAL DA CHAPA METÁLICA)
+          // ========================================================
+          const chladniPlate = coefA * Math.cos(n * sx) * Math.cos(m * sz) + coefB * Math.cos(m * sx) * Math.cos(n * sz);
+          pos[i * 3] = ox;
+          pos[i * 3 + 2] = oz;
+          pos[i * 3 + 1] = chladniPlate * activeAmp * 0.12 * Math.sin(timeScale);
+
+        } else {
+          // ========================================================
+          // MESA 3: FUSÃO CIMÁTICA HÍBRIDA (BLOQUE 4 DO DOSSIÊ TÉCNICO)
+          // ========================================================
+          // 1. Geometria Nodal de Chladni u(sx, sz)
+          const u_node = coefA * Math.cos(n * sx) * Math.cos(m * sz) + coefB * Math.cos(m * sx) * Math.cos(n * sz);
+          const absUNode = Math.abs(u_node);
+
+          // 2. Máscara Gaussiana centrada nas linhas nodais (S = A_drive * cos(omega*t) * exp(-|u|^2 / eps^2))
+          // A própria linha nodal funciona como matriz excitadora contínua emitindo micro-ondas
+          const epsilon_nodal = 0.22;
+          const nodalSource = Math.exp(-(absUNode * absUNode) / (epsilon_nodal * epsilon_nodal)) * Math.cos(timeScale);
+
+          // 3. Radiação de onda cilíndrica a partir da figura
+          const J0_dir = Math.cos(k * r) / Math.sqrt(Math.max(1.0, k * r));
+          const distRefl = Math.abs(2 * R_cubeta - r);
+          const J0_refl = Math.cos(k * distRefl) / Math.sqrt(Math.max(1.0, k * distRefl));
+          const fluidInterference = J0_dir + 0.85 * J0_refl;
+
+          // 4. Camada Esponja Absorvente (PML Radial para 4ª ordem)
+          // r_inner = 0.85 * R_cubeta, dissipando a energia antes da borda quadrada computacional
+          const r_inner = 0.85 * R_cubeta;
+          let gammaPML = gammaShallow;
+          if (r > r_inner) {
+            const pmlFactor = (r - r_inner) / (R_cubeta - r_inner);
+            gammaPML += 85.0 * Math.pow(pmlFactor, 3);
+          }
+          const dampPML = Math.exp(-gammaPML * 0.0022 * r);
+
+          // 5. Fusão Acoplada da EDP Capilar-Gravitacional
+          let waveHybrid = (nodalSource * 0.52 + fluidInterference * Math.cos(sim * theta) * faradayHarmonics * 0.48) * dampPML * activeAmp * 0.62;
+
+          // Perturbação Multi-Ponto por Luzes Arrastáveis (se ativada)
+          if (STUDIO_STATE.lightsAsExciters && customLights.length > 0) {
+            for (let l = 0; l < customLights.length; l++) {
+              const cl = customLights[l];
+              const lx = cl.light.position.x;
+              const lz = cl.light.position.z;
+              const dLight = Math.sqrt((ox - lx) * (ox - lx) + (oz - lz) * (oz - lz));
+              waveHybrid += Math.exp(-dLight * 0.75) * Math.cos(k * dLight - timeScale) * activeAmp * 0.22 * (cl.intensity / 80.0);
+            }
+          }
+
+          // Estabilização Cimática / Persistência Temporal da Onda
+          if (previousHeights) {
+            waveHybrid = waveHybrid * (1.0 - STUDIO_STATE.persistence) + previousHeights[i] * STUDIO_STATE.persistence;
+            previousHeights[i] = waveHybrid;
+          }
+
+          pos[i * 3] = ox;
+          pos[i * 3 + 2] = oz;
+          pos[i * 3 + 1] = waveHybrid;
+        }
+      }
+
+      baseGeometry.computeVertexNormals();
+      baseGeometry.attributes.position.needsUpdate = true;
+
+      // Renderiza a cena
+      renderer.render(scene, camera);
+    }
+
+    // Inicializa quando a página carregar
+    window.addEventListener('DOMContentLoaded', initCymaticsStudio);
+  </script>
+</body>
+</html>
