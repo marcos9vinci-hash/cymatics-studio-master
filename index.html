@@ -2964,14 +2964,14 @@
       // Amplitude proporcional ao envelope de áudio e ganho da mesa
       let activeAmp = audioState.volume * (STUDIO_STATE.gain / 35.0);
 
-      // Se o oscilador senoidal estiver ativo, assegura amplitude visível e nítida!
-      if (AudioEngine.isOscillatorActive) {
-        activeAmp = Math.max(activeAmp, 0.85 * (STUDIO_STATE.gain / 35.0));
+      // Se o oscilador senoidal estiver ativo ou qualquer preset estiver selecionado,
+      // assegura relevo 3D nítido e ondulação viva contínua!
+      if (AudioEngine.isOscillatorActive || STUDIO_STATE.currentHz > 0) {
+        activeAmp = Math.max(activeAmp, 0.78 * (STUDIO_STATE.gain / 35.0));
       }
 
-      // Se nenhum áudio estiver tocando e o oscilador estiver desligado,
-      // a superfície retorna perfeitamente ao repouso espelhado plano (silêncio imediato)
-      if (AudioEngine.currentSourceType === null && !AudioEngine.isOscillatorActive && audioState.volume < 0.001) {
+      // Se nenhum áudio estiver tocando, oscilador desligado e sem preset ativo
+      if (AudioEngine.currentSourceType === null && !AudioEngine.isOscillatorActive && STUDIO_STATE.currentHz === 0 && audioState.volume < 0.001) {
         activeAmp = 0;
       }
 
@@ -3040,7 +3040,7 @@
           const radialInterference = J0_direct + 0.85 * J0_refl;
 
           // Envelope de amortecimento da lâmina rasa de 1.50 mm
-          const dampEnvelope = Math.exp(-gammaShallow * 0.0018 * r);
+          const dampEnvelope = Math.exp(-r * 0.065);
           // Simetria azimutal m-fold (pétalas geométricas do CymaScope)
           const azimuthalMod = Math.cos(sim * theta);
 
@@ -3091,12 +3091,11 @@
           // 4. Camada Esponja Absorvente (PML Radial para 4ª ordem)
           // r_inner = 0.85 * R_cubeta, dissipando a energia antes da borda quadrada computacional
           const r_inner = 0.85 * R_cubeta;
-          let gammaPML = gammaShallow;
+          let dampPML = Math.exp(-r * 0.065);
           if (r > r_inner) {
-            const pmlFactor = (r - r_inner) / (R_cubeta - r_inner);
-            gammaPML += 85.0 * Math.pow(pmlFactor, 3);
+            const pmlDist = (r - r_inner) / (R_cubeta - r_inner);
+            dampPML *= Math.max(0, 1.0 - pmlDist * pmlDist);
           }
-          const dampPML = Math.exp(-gammaPML * 0.0022 * r);
 
           // 5. Fusão Acoplada da EDP Capilar-Gravitacional
           let waveHybrid = (nodalSource * 0.52 + fluidInterference * Math.cos(sim * theta) * faradayHarmonics * 0.48) * dampPML * activeAmp * 0.62;
