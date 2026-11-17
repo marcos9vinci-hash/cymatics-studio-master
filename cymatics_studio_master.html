@@ -557,15 +557,25 @@
           
           <!-- BOTÕES DE ENTRADA AO VIVO COM TOGGLE REAL ON/OFF -->
           <div class="grid grid-cols-2 gap-1.5">
-            <button id="btn-mic" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1 transition-all">
+            <button id="btn-mic" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1 transition-all" title="Captar voz ou som ambiente pelo microfone">
               <span>🎤</span> <span id="lbl-mic">Microfone: OFF</span>
             </button>
-            <button id="btn-system" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1 transition-all">
-              <span>💻</span> <span id="lbl-sys">Sistema: OFF</span>
+            <button id="btn-system" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1 transition-all" title="Captar som interno do PC (YouTube, Spotify, Tela Inteira ou Guia)">
+              <span>💻</span> <span id="lbl-sys">Áudio PC: OFF</span>
             </button>
           </div>
 
-          <!-- VU METER & SENSIBILIDADE DO MICROFONE EM TEMPO REAL -->
+          <!-- SELETOR DE DISPOSITIVO DE ENTRADA (MICROFONE / MIXAGEM) -->
+          <div class="space-y-1">
+            <select id="mic-device-select" class="w-full bg-[#0d0d18] border border-white/10 text-gray-200 text-[8px] font-medium rounded-lg px-2 py-1.5 outline-none focus:border-cyan-400">
+              <option value="default">🎤 Dispositivo Padrão do Windows</option>
+            </select>
+            <div id="audio-source-status" class="text-[7.5px] text-gray-400 truncate px-0.5">
+              Dica: Para YouTube/Spotify use <b class="text-cyan-300">💻 Áudio PC</b> (marque Compartilhar áudio).
+            </div>
+          </div>
+
+          <!-- VU METER & SENSIBILIDADE DE ENTRADA EM TEMPO REAL -->
           <div class="p-2.5 bg-black/50 rounded-xl border border-white/10 space-y-1.5 shadow-inner">
             <div class="flex justify-between items-center text-[7.5px]">
               <span class="text-gray-300 font-bold uppercase tracking-wider flex items-center gap-1">
@@ -578,10 +588,10 @@
               <div id="mic-vu-bar" class="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 rounded-full transition-all duration-75 shadow-[0_0_8px_rgba(6,182,212,0.6)]" style="width: 0%"></div>
             </div>
             <div class="flex justify-between items-center text-[7.5px] pt-1">
-              <span class="text-gray-400 font-bold uppercase">Ganho / Sensibilidade Mic:</span>
+              <span class="text-gray-400 font-bold uppercase">Ganho / Sensibilidade Entrada:</span>
               <span id="val-mic-gain" class="text-cyan-300 font-mono font-bold">2.5x</span>
             </div>
-            <input type="range" id="slider-mic-gain" min="0.5" max="6.0" step="0.1" value="2.5" class="w-full">
+            <input type="range" id="slider-mic-gain" min="0.5" max="8.0" step="0.1" value="2.5" class="w-full">
           </div>
 
           <div class="pt-1 flex justify-between items-center text-[8px]">
@@ -962,7 +972,8 @@
 
     // Áudio e Oscilador Interno
     let audioCtx, analyser, gainNode, sourceNode, lowPass;
-    let dataArray;
+    let dataArray, timeDomainArray;
+    let silentSink = null;
     let currentStream = null;
     let streamGainNode = null;
     let micGainMultiplier = 2.5;
@@ -1680,8 +1691,11 @@
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 2048;
-        analyser.smoothingTimeConstant = 0.85;
+        analyser.smoothingTimeConstant = 0.65;
+        analyser.minDecibels = -95;
+        analyser.maxDecibels = -15;
         dataArray = new Uint8Array(analyser.frequencyBinCount);
+        timeDomainArray = new Float32Array(analyser.fftSize);
 
         gainNode = audioCtx.createGain();
         gainNode.gain.value = 1.0;
@@ -1689,8 +1703,39 @@
         lowPass = audioCtx.createBiquadFilter();
         lowPass.type = 'lowpass';
         lowPass.frequency.value = 450;
+
+        // CRÍTICO NO CHROME: Conectar o analyser a um nó mudo ligado ao destination
+        // obriga o agendador de áudio do Chromium a puxar frames do microfone/sistema continuamente!
+        silentSink = audioCtx.createGain();
+        silentSink.gain.value = 0.0;
+        analyser.connect(silentSink);
+        silentSink.connect(audioCtx.destination);
       }
       if (audioCtx.state === 'suspended') await audioCtx.resume();
+    }
+
+    async function refreshMicDevices() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices.filter(d => d.kind === 'audioinput');
+        const sel = document.getElementById('mic-device-select');
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = '<option value="default">🎤 Dispositivo Padrão do Windows</option>';
+        inputs.forEach((d, idx) => {
+          if (d.deviceId === 'default' || d.deviceId === 'communications') return;
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.textContent = '🎤 ' + (d.label || ('Microfone ' + (idx + 1)));
+          sel.appendChild(opt);
+        });
+        if (prev && Array.from(sel.options).some(o => o.value === prev)) {
+          sel.value = prev;
+        }
+      } catch (e) {
+        console.warn('Erro ao listar dispositivos de áudio:', e);
+      }
     }
 
     async function ensureInternalOscillator() {
@@ -1715,7 +1760,7 @@
       internalGain.gain.linearRampToValueAtTime(effectiveVol, audioCtx.currentTime + duration);
     }
 
-    // LIGA / DESLIGA STREAM (MICROFONE OU SISTEMA) COM ALTA SENSIBILIDADE
+    // LIGA / DESLIGA STREAM (MICROFONE OU ÁUDIO INTERNO DO PC) COM PULL GARANTIDO NO CHROME
     async function startStream(type) {
       await initAudio();
       if (audioCtx && audioCtx.state === 'suspended') {
@@ -1727,31 +1772,74 @@
       fadeInternalSound(0, 0.3);
       stopEverything(false);
 
+      // Reseta visualmente os dois botões antes de ligar o novo
+      document.getElementById('btn-mic').classList.remove('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
+      document.getElementById('lbl-mic').innerText = "Microfone: OFF";
+      document.getElementById('btn-system').classList.remove('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
+      document.getElementById('lbl-sys').innerText = "Áudio PC: OFF";
+
+      const statusEl = document.getElementById('audio-source-status');
+
       try {
         let stream;
         if (type === 'mic') {
+          const sel = document.getElementById('mic-device-select');
+          const devId = sel ? sel.value : 'default';
+          const audioCfg = {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: true
+          };
+          if (devId && devId !== 'default') {
+            audioCfg.deviceId = { exact: devId };
+          }
           try {
-            // Prioriza áudio cristalino com autoGainControl ativo para captar voz e sons distantes
-            stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: false,
-                noiseSuppression: false,
-                autoGainControl: true
-              }
-            });
+            stream = await navigator.mediaDevices.getUserMedia({ audio: audioCfg });
           } catch (errConstraints) {
-            console.warn("Tentando fallback de microfone simples:", errConstraints);
+            console.warn("Fallback para constraints simples de microfone:", errConstraints);
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           }
+          await refreshMicDevices();
         } else {
-          stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          // Captura do Áudio Interno do PC (YouTube, Spotify, Tela Inteira ou Guia do Chrome)
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+              suppressLocalAudioPlayback: false
+            },
+            systemAudio: 'include',
+            selfBrowserSurface: 'exclude'
+          });
         }
 
-        sourceNode = audioCtx.createMediaStreamSource(stream);
-        
-        // Cria nó dedicado de ganho para amplificação da sensibilidade de entrada
+        const audioTracks = stream.getAudioTracks();
+        if (!audioTracks || audioTracks.length === 0) {
+          stream.getTracks().forEach(t => t.stop());
+          if (type === 'system') {
+            alert(
+              "Nenhum áudio foi compartilhado!\n\n" +
+              "Para captar o som do PC (YouTube, Spotify, etc.):\n" +
+              "1. Escolha a aba 'Guia do Chrome' (ex: YouTube) OU 'Tela Inteira'.\n" +
+              "2. Ative a chave 'Compartilhar áudio da guia' / 'Compartilhar áudio do sistema' no canto inferior.\n" +
+              "(Obs: A aba 'Janela' do Chrome não compartilha áudio)."
+            );
+          } else {
+            alert("Nenhuma faixa de áudio foi detectada no microfone selecionado.");
+          }
+          stopEverything(true);
+          return;
+        }
+
+        // Cria MediaStream dedicado somente de áudio para evitar conflito com faixa de vídeo no WebAudio
+        const audioOnlyStream = new MediaStream(audioTracks);
+        sourceNode = audioCtx.createMediaStreamSource(audioOnlyStream);
+
+        // Nó dedicado de ganho aplicável tanto para microfone quanto para áudio do PC
         streamGainNode = audioCtx.createGain();
-        streamGainNode.gain.setValueAtTime(type === 'mic' ? micGainMultiplier : 1.0, audioCtx.currentTime);
+        streamGainNode.gain.setValueAtTime(micGainMultiplier, audioCtx.currentTime);
         sourceNode.connect(streamGainNode);
 
         if (PARAMS.proFilter) {
@@ -1761,19 +1849,48 @@
           streamGainNode.connect(analyser);
         }
 
+        // Garante desligamento limpo caso o usuário pare o compartilhamento na barra do Chrome
+        audioTracks[0].onended = () => {
+          if (currentStream === stream) stopEverything(true);
+        };
+        const videoTracks = stream.getVideoTracks();
+        if (videoTracks && videoTracks[0]) {
+          videoTracks[0].onended = () => {
+            if (currentStream === stream) stopEverything(true);
+          };
+        }
+
         currentStream = stream;
         activeStreamType = type;
+
+        const trackLabel = audioTracks[0].label || (type === 'mic' ? 'Microfone Ativo' : 'Áudio do Sistema');
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="text-emerald-400 font-bold">● ATIVO:</span> ${trackLabel}`;
+        }
 
         if (type === 'mic') {
           document.getElementById('btn-mic').classList.add('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
           document.getElementById('lbl-mic').innerText = "Microfone: ON";
         } else {
           document.getElementById('btn-system').classList.add('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
-          document.getElementById('lbl-sys').innerText = "Sistema: ON";
+          document.getElementById('lbl-sys').innerText = "Áudio PC: ON";
         }
       } catch (err) {
         console.error("Erro ao ativar stream de áudio:", err);
-        alert("Não foi possível acessar a entrada de áudio. Verifique se o microfone está conectado e se o navegador tem permissão.");
+        if (err && err.name === 'NotAllowedError') {
+          if (type === 'system') {
+            // Usuário cancelou o diálogo de compartilhamento - não mostrar erro falso de microfone
+            if (statusEl) statusEl.innerText = "Compartilhamento de áudio do PC cancelado.";
+          } else {
+            alert("Permissão de microfone negada no navegador. Clique no cadeado/ícone ao lado de localhost:8080 e permita o Microfone.");
+          }
+        } else {
+          alert(
+            type === 'system'
+              ? "Não foi possível captar o áudio do PC. Selecione 'Guia do Chrome' ou 'Tela Inteira' e marque 'Compartilhar áudio'."
+              : "Não foi possível acessar o microfone: " + (err.message || err.name)
+          );
+        }
         stopEverything(true);
       }
     }
@@ -1878,11 +1995,13 @@
         fadeInternalSound(0, 0.2);
         renderPlaylist();
         
-        document.getElementById('btn-mic').classList.remove('bg-blue-600', 'text-white');
+        document.getElementById('btn-mic').classList.remove('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
         document.getElementById('lbl-mic').innerText = "Microfone: OFF";
         
-        document.getElementById('btn-system').classList.remove('bg-blue-600', 'text-white');
-        document.getElementById('lbl-sys').innerText = "Sistema: OFF";
+        document.getElementById('btn-system').classList.remove('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
+        document.getElementById('lbl-sys').innerText = "Áudio PC: OFF";
+        const statusEl = document.getElementById('audio-source-status');
+        if (statusEl) statusEl.innerHTML = 'Dica: Para YouTube/Spotify use <b class="text-cyan-300">💻 Áudio PC</b> (marque Compartilhar áudio).';
       }
     }
 
@@ -2064,8 +2183,17 @@
         sliderMicGain.oninput = (e) => {
           micGainMultiplier = parseFloat(e.target.value);
           document.getElementById('val-mic-gain').innerText = micGainMultiplier.toFixed(1) + 'x';
-          if (streamGainNode && activeStreamType === 'mic') {
+          if (streamGainNode && audioCtx) {
             streamGainNode.gain.setValueAtTime(micGainMultiplier, audioCtx.currentTime);
+          }
+        };
+      }
+      const micDeviceSel = document.getElementById('mic-device-select');
+      if (micDeviceSel) {
+        refreshMicDevices();
+        micDeviceSel.onchange = async () => {
+          if (currentStream && activeStreamType === 'mic') {
+            await startStream('mic');
           }
         };
       }
@@ -2321,12 +2449,22 @@
           audioCtx.resume();
         }
         analyser.getByteFrequencyData(dataArray);
+        let timeRms = 0;
+        if (timeDomainArray) {
+          analyser.getFloatTimeDomainData(timeDomainArray);
+          let sumSq = 0;
+          for (let i = 0; i < timeDomainArray.length; i++) {
+            const s = timeDomainArray[i];
+            sumSq += s * s;
+          }
+          timeRms = Math.sqrt(sumSq / timeDomainArray.length);
+        }
 
         const binWidth = audioCtx.sampleRate / analyser.fftSize; // ~23.44 Hz
-        // Ignora DC offset / zumbido elétrico abaixo de 55 Hz (bins 0 a 2)
-        const minBin = Math.max(2, Math.floor(55 / binWidth));
-        // Limita a busca harmônica até 3200 Hz onde reside a energia vocal e musical
-        const maxBin = Math.min(dataArray.length - 1, Math.floor(3200 / binWidth));
+        // Ignora DC offset abaixo de 45 Hz (bins 0 e 1)
+        const minBin = Math.max(2, Math.floor(45 / binWidth));
+        // Busca harmônica até 3500 Hz (graves, voz e harmônicos musicais)
+        const maxBin = Math.min(dataArray.length - 1, Math.floor(3500 / binWidth));
 
         let peakVal = 0;
         let peakIdx = minBin;
@@ -2343,21 +2481,21 @@
           }
         }
 
-        // RMS real da banda audível (0.0 a 1.0)
-        const rms = Math.sqrt(bandEnergy / Math.max(1, count)) / 255.0;
+        // Combina energia FFT + pressão acústica real do TimeDomain (capta voz, graves e PC)
+        const fftRms = Math.sqrt(bandEnergy / Math.max(1, count)) / 255.0;
+        const activeRms = Math.max(fftRms, timeRms * 2.2);
 
         // Atualização contínua do VU Meter no painel lateral
         const vuBar = document.getElementById('mic-vu-bar');
         const vuText = document.getElementById('mic-vu-text');
         if (vuBar && vuText) {
-          const pct = Math.min(100, Math.round(rms * 280));
+          const pct = Math.min(100, Math.round(activeRms * 320));
           vuBar.style.width = pct + '%';
           vuText.innerText = pct + '%';
         }
 
-        // Sensibilidade responsiva: qualquer som (voz normal, assobios, batidas, música)
-        if (rms > 0.010 && peakVal > 14) {
-          // Interpolação parabólica para encontrar a frequência harmônica fundamental contínua
+        // Limiar ultra-responsivo para qualquer sinal real de microfone ou música do PC
+        if (activeRms > 0.004 || peakVal > 8) {
           let fineIdx = peakIdx;
           if (peakIdx > minBin && peakIdx < maxBin) {
             const y1 = dataArray[peakIdx - 1];
@@ -2370,12 +2508,12 @@
             }
           }
 
-          const rawHz = fineIdx * binWidth;
-          const targetVol = Math.min(1.8, rms * (PARAMS.gain / 8.0));
+          const rawHz = Math.max(55, fineIdx * binWidth);
+          const targetVol = Math.min(2.0, activeRms * (PARAMS.gain / 6.5));
           smoothedVolume = smoothedVolume * mem + targetVol * (1 - mem);
 
-          if (rawHz >= 50 && rawHz <= 3500) {
-            currentHz = currentHz * (mem * 0.6) + rawHz * (1 - mem * 0.6);
+          if (rawHz >= 45 && rawHz <= 3500) {
+            currentHz = currentHz * (mem * 0.55) + rawHz * (1 - mem * 0.55);
           }
         } else {
           smoothedVolume *= (0.82 + mem * 0.12);
@@ -2479,16 +2617,17 @@
           const bp = time * Math.min(3000, Math.max(20, effectiveHz)) * 0.012;
 
           if (isSingleCenter) {
-            // 1 Ponto Central Puro: injeção central com dispersão suave (raio 2 células)
+            // 1 Ponto Central Puro: injeção Gaussiana ampla e orgânica (sem pico artificial)
             const cx = Math.floor(res / 2);
             const cy = Math.floor(res / 2);
-            for (let dy = -2; dy <= 2; dy++) {
-              for (let dx = -2; dx <= 2; dx++) {
+            const drive = Math.sin(bp) * fluidVol * 0.28;
+            for (let dy = -4; dy <= 4; dy++) {
+              for (let dx = -4; dx <= 4; dx++) {
                 const d2 = dx * dx + dy * dy;
-                if (d2 <= 5) {
-                  const weight = Math.exp(-d2 / 2.2);
+                if (d2 <= 16) {
+                  const weight = Math.exp(-d2 / 5.5);
                   const idx = (cy + dy) * gRes + (cx + dx);
-                  hField[idx] += Math.sin(bp) * fluidVol * weight * 0.42;
+                  hField[idx] += drive * weight;
                 }
               }
             }
@@ -2530,32 +2669,35 @@
           }
         }
 
-        // 3. Propagação de Onda Discreta 2D (Laplaciano Isotrópico de 2ª Ordem) com PML
-        const ds = 0.985 - (PARAMS.stability || 0) * 0.005;
-        const ws = 0.12 + (PARAMS.stability || 0) * 0.04;
-        for (let y = 1; y < gRes - 1; y++) {
-          const row = y * gRes;
-          const normY = (y / res) * 2 - 1;
-          for (let x = 1; x < gRes - 1; x++) {
-            const i = row + x;
-            const normX = (x / res) * 2 - 1;
-            const rNorm = Math.sqrt(normX * normX + normY * normY);
+        // 3. Propagação de Onda Discreta 2D (Laplaciano Isotrópico Rápido de 2ª Ordem) com PML
+        const ds = 0.988 - (PARAMS.stability || 0) * 0.004;
+        const ws = 0.46 + (PARAMS.stability || 0) * 0.08;
+        // 2 sub-passos leves por frame espalham os anéis de Faraday por toda a mesa sem acumular pico central
+        for (let sub = 0; sub < 2; sub++) {
+          for (let y = 1; y < gRes - 1; y++) {
+            const row = y * gRes;
+            const normY = (y / res) * 2 - 1;
+            for (let x = 1; x < gRes - 1; x++) {
+              const i = row + x;
+              const normX = (x / res) * 2 - 1;
+              const rNorm = Math.sqrt(normX * normX + normY * normY);
 
-            let edgeDamp = ds;
-            if (rNorm > 0.82) {
-              const pml = (rNorm - 0.82) / 0.18;
-              edgeDamp *= Math.max(0.65, 1.0 - pml * 0.35);
+              let edgeDamp = ds;
+              if (rNorm > 0.80) {
+                const pml = (rNorm - 0.80) / 0.20;
+                edgeDamp *= Math.max(0.72, 1.0 - pml * 0.28);
+              }
+
+              vField[i] = (vField[i] + ((hField[i - 1] + hField[i + 1] + hField[i - gRes] + hField[i + gRes]) * 0.25 - hField[i]) * ws) * edgeDamp;
             }
-
-            vField[i] = (vField[i] + ((hField[i - 1] + hField[i + 1] + hField[i - gRes] + hField[i + gRes]) * 0.25 - hField[i]) * ws) * edgeDamp;
+          }
+          for (let i = 0; i < total; i++) {
+            hField[i] += vField[i];
           }
         }
-        for (let i = 0; i < total; i++) {
-          hField[i] += vField[i];
-        }
 
-        // 4. Mapeamento Direto nos Vértices (Ultra Rápido, Zero Transcendental na Malha)
-        const dispScale = (12.0 + (PARAMS.stability || 0) * 18.0) * (PARAMS.gain / 35.0);
+        // 4. Mapeamento Direto nos Vértices com Limitação Orgânica (Sem Picos Artificiais)
+        const dispScale = (1.55 + (PARAMS.stability || 0) * 0.8) * (PARAMS.gain / 30.0);
         for (let i = 0; i < pos.length; i += 3) {
           const idx = i / 3;
           const ox = originalPositions[i], oz = originalPositions[i + 2];
@@ -2566,7 +2708,7 @@
             // Silêncio: colapso instantâneo para o espelho perfeitamente plano
             pos[i + 1] = 0.0;
           } else {
-            let h = hField[idx] * dispScale;
+            let h = Math.tanh(hField[idx] * 0.85) * dispScale;
             if (activeMesa === 'fusion_cymatic') {
               const nx = ox / halfSize, nz = oz / halfSize;
               const u_node = evalChladni(nx, nz, modeInfo.m, modeInfo.n, modeInfo.sign);
