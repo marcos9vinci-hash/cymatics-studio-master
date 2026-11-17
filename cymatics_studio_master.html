@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cymatics Studio Master 3D - Água Espelho Negro + Grãos de Chladni + Matriz Sagrada</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <title>Cymatics Studio Master 3D - Física Realista de Água + Geometrias Sagradas & Iluminação</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -227,30 +231,35 @@
     </div>
   </div>
 
-  <!-- MODAL FLUTUANTE: LUMINÁRIA & ESTÚDIO DE LUZES 3D (CONTROLE SEPARADO) -->
-  <div id="modal-lights-studio" class="fixed top-20 right-6 w-[380px] max-h-[85vh] glass-ui rounded-3xl z-[150] p-5 hidden flex-col shadow-2xl overflow-hidden">
+  <!-- MODAL ESTÚDIO DUAL: ILUMINAÇÃO 3D & GEOMETRIAS SAGRADAS (DUAS PARTES) -->
+  <div id="modal-lights-studio" class="fixed top-20 right-6 w-[800px] max-w-[95vw] max-h-[88vh] glass-ui rounded-3xl z-[150] p-5 hidden flex-col shadow-2xl overflow-hidden border border-white/15">
+    <!-- CABEÇALHO DO ESTÚDIO COM ABAS DUAS PARTES -->
     <div class="flex justify-between items-center pb-3 mb-3 border-b border-white/10">
-      <div class="flex items-center gap-2">
-        <span class="text-base">💡</span>
-        <div>
-          <h3 class="text-xs font-black uppercase tracking-widest text-white">Luminária & Estúdio 3D</h3>
-          <p class="text-[8px] text-[#d4af37] font-bold uppercase">Aproxime / Afaste & Mude o Ângulo</p>
+      <div class="flex items-center gap-3">
+        <div class="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+          <button id="tab-btn-lights" class="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg flex items-center gap-1.5">
+            <span>💡</span> 1. Iluminação 3D
+          </button>
+          <button id="tab-btn-sacred" class="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-400 hover:text-white flex items-center gap-1.5">
+            <span>🔯</span> 2. Geometrias Sagradas
+          </button>
         </div>
       </div>
-      <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-2">
         <button id="add-light-modal-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[8px] font-black uppercase">+ Nova Luz</button>
         <button id="close-lights-modal" class="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white">✕</button>
       </div>
     </div>
 
-    <div class="space-y-3 overflow-y-auto custom-scroll pr-1 flex-1">
+    <!-- CORPO DO ESTÚDIO: ABA 1 (ILUMINAÇÃO 3D) -->
+    <div id="studio-tab-content-lights" class="space-y-3 overflow-y-auto custom-scroll pr-1 flex-1">
       <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl text-[8px] text-gray-300 font-bold">
         <span>Marcador Visual na Mesa:</span>
         <button id="toggle-light-helpers" class="px-2 py-0.5 rounded bg-white/10 text-gray-300 border border-white/20">Bolinhas 3D: OFF</button>
       </div>
 
       <div>
-        <div class="text-[8px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Luminárias Ativas (Selecione & Regule):</div>
+        <div class="text-[8px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Luminárias Ativas (Selecione & Regule Altura Y, Ângulo e Posição):</div>
         <div id="lights-list-modal" class="space-y-2"></div>
       </div>
 
@@ -283,6 +292,77 @@
           </div>
         </div>
         <div id="modal-ray-colors" class="flex flex-wrap gap-1 pt-1.5"></div>
+      </div>
+    </div>
+
+    <!-- CORPO DO ESTÚDIO: ABA 2 (GEOMETRIAS SAGRADAS & OBSERVATÓRIO VISUAL) -->
+    <div id="studio-tab-content-sacred" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto custom-scroll pr-1 flex-1">
+      <!-- Coluna Esquerda: Controles & Abertura -->
+      <div class="space-y-4">
+        <div>
+          <label class="text-[9px] font-black uppercase tracking-widest text-cyan-400 block mb-1.5">Padrão Geométrico Sagrado:</label>
+          <select id="modal-sacred-select" class="w-full bg-[#0d0d18] border border-white/15 rounded-xl p-2.5 text-[9px] font-bold text-white uppercase focus:border-cyan-400 outline-none">
+            <option value="ponto_central_1" selected>⦿ 1 Ponto Central (Físico Clássico - 1 Ponto)</option>
+            <option value="vesica_piscis">⚬ Vesica Piscis (Dualidade & Mandorla)</option>
+            <option value="triquetra">☘ Triquetra (3 Nós Nodais da Trindade)</option>
+            <option value="cruz_harmonica">➕ Cruz Harmônica (4 Quadrantes Sagrados)</option>
+            <option value="pentagrama">⭐ Pentagrama (5 Centros de Proporção Áurea)</option>
+            <option value="semente_vida">✿ Semente da Vida (Gênese 7 Centros a 60°)</option>
+            <option value="saraceni_8">✵ Octograma de Saraceni (8 Tronos Divinos)</option>
+            <option value="metatron_13">❂ Cubo de Metatron (13 Centros / Fruto da Vida)</option>
+            <option value="flor_vida_19">۞ Flor da Vida Expandida (19 Centros)</option>
+            <option value="auto_atlas">⚡ AUTO: Ressonância com Atlas Hz</option>
+          </select>
+        </div>
+
+        <!-- CONTROLE DA ABERTURA / ESCALA -->
+        <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10 space-y-2">
+          <div class="flex justify-between items-center text-[9px] font-bold">
+            <span class="text-gray-300 uppercase">Abertura dos Pontos de Vibração:</span>
+            <span id="lbl-sacred-scale" class="text-cyan-300 font-mono font-black text-xs">100% (Normal)</span>
+          </div>
+          <input type="range" id="slider-sacred-scale" min="0.15" max="2.5" step="0.05" value="1.0" class="w-full accent-cyan-400 cursor-pointer" title="Controla a abertura: concentrado no centro até expandido pela mesa">
+          <div class="flex justify-between text-[7px] text-gray-500 font-bold uppercase">
+            <span>0.15x Compacto (Centro)</span>
+            <span>1.0x Padrão</span>
+            <span>2.5x Totalmente Expandido</span>
+          </div>
+          <p class="text-[7.5px] text-gray-400 leading-relaxed pt-1">
+            Modifica a distância entre os cruzamentos da geometria sagrada na mesa d'água. Reduzir concentra os vórtices no núcleo central; expandir distribui os nós ressonantes por toda a superfície.
+          </p>
+        </div>
+
+        <!-- TOGGLE HOLOGRAMA NA MESA -->
+        <div class="flex justify-between items-center bg-white/5 p-3 rounded-2xl border border-white/10">
+          <div>
+            <div class="text-[9px] font-black uppercase text-white">Traçado Sagrado na Mesa 3D:</div>
+            <div class="text-[7.5px] text-gray-400">Projeta as linhas e nós etéreos sobre a superfície da água</div>
+          </div>
+          <button id="toggle-hologram-btn" class="px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[8px] font-black uppercase hover:bg-cyan-500/30 transition-all">
+            Holograma: OFF
+          </button>
+        </div>
+
+        <!-- INFO CARD -->
+        <div id="modal-sacred-info" class="p-3 bg-[#0a0a16] border border-white/10 rounded-2xl text-[8px] text-gray-400 leading-relaxed space-y-1">
+          <span class="text-[#d4af37] font-black uppercase block">⦿ Ponto Central Único:</span>
+          Foco acústico central clássico do CymaScope. Produz ondas concêntricas puras e límpidas de Faraday sem interferências espúrias.
+        </div>
+      </div>
+
+      <!-- Coluna Direita: O Observatório Visual da Geometria (Canvas 2D) -->
+      <div class="bg-[#030308] p-3.5 rounded-2xl border border-cyan-500/20 flex flex-col items-center justify-between shadow-inner">
+        <div class="w-full flex justify-between items-center pb-2 border-b border-white/10 text-[8px] font-black uppercase">
+          <span class="text-cyan-400 font-bold tracking-wider">Observatório Visual 2D (Tempo Real)</span>
+          <span id="canvas-hz-badge" class="text-[#d4af37] font-mono">0 Hz</span>
+        </div>
+        <div class="relative my-2">
+          <canvas id="sacred-geometry-canvas" width="280" height="280" class="rounded-xl border border-white/10 bg-[#020206] shadow-2xl"></canvas>
+        </div>
+        <div class="w-full flex justify-between items-center text-[7.5px] text-gray-400 font-bold uppercase pt-1">
+          <span id="canvas-node-count" class="text-cyan-300 font-mono">1 Ponto Central</span>
+          <span class="text-[#d4af37]">Cruzamentos Ativos</span>
+        </div>
       </div>
     </div>
   </div>
@@ -375,8 +455,8 @@
       <button id="nav-btn-launcher" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[9px] font-black uppercase tracking-wider transition-all">
         🚀 Inicializador
       </button>
-      <button id="nav-btn-lights" class="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[9px] font-black uppercase tracking-wider transition-all">
-        💡 Luminária 3D
+      <button id="nav-btn-lights" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg">
+        ✨ Estúdio 3D: Luzes & Geometrias
       </button>
       <button id="nav-btn-view" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all" title="Alternar Vista Topo / 3D">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
@@ -827,7 +907,10 @@
       }
     };
 
-    let activeSacredMatrix = 'ponto_central_1'; // Padrão: 1 Único Ponto Central!
+    let activeSacredMatrix = 'ponto_central_1'; // Padrão: 1 Único Ponto Central
+    let sacredScale = 1.0; // Controle de Abertura / Escala da Geometria (0.15x a 2.5x)
+    let hologramActive = false;
+    let sacredHologramGroup = null; // Padrão: 1 Único Ponto Central!
 
     // ============================================================================
     // ESTADO GLOBAL & THREE.JS
@@ -954,6 +1037,11 @@
       });
       plateMesh = new THREE.Mesh(plateGeometry, plateMaterial);
       scene.add(plateMesh);
+
+      // Grupo do Holograma 3D Eéreo sobre a Água (Zero Bacia, Zero Aro)
+      sacredHologramGroup = new THREE.Group();
+      sacredHologramGroup.visible = false;
+      scene.add(sacredHologramGroup);
 
       initSandParticles();
       initFluxParticles();
@@ -1227,6 +1315,217 @@
         lights.splice(idx, 1);
       }
     };
+
+    
+    // ============================================================================
+    // OBSERVATÓRIO VISUAL 2D DAS GEOMETRIAS SAGRADAS (CANVAS EM TEMPO REAL)
+    // ============================================================================
+    function drawSacredGeometryCanvas() {
+      const cvs = document.getElementById('sacred-geometry-canvas');
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      const w = cvs.width, h = cvs.height;
+      const cx = w / 2, cy = h / 2;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Fundo escuro profundo com grid sutil
+      ctx.fillStyle = '#020206';
+      ctx.fillRect(0, 0, w, h);
+
+      // Círculo limite externo
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, w * 0.45, 0, Math.PI * 2);
+      ctx.stroke();
+
+      let resolvedKey = activeSacredMatrix;
+      const effectiveHz = Math.max(currentHz, manualHz);
+      const modeInfo = getChladniModeForHz(effectiveHz);
+      if (activeSacredMatrix === 'auto_atlas') {
+        resolvedKey = modeInfo.sacred || 'ponto_central_1';
+      }
+      const matrix = SACRED_MATRICES[resolvedKey] || SACRED_MATRICES['ponto_central_1'];
+      const pts = matrix.points;
+      const isSingleCenter = (pts.length === 1 && pts[0].x === 0 && pts[0].z === 0);
+
+      const baseR = w * 0.38 * Math.min(1.2, Math.max(0.2, sacredScale));
+
+      // 1. Desenho das Linhas e Círculos Sagrados
+      ctx.strokeStyle = 'rgba(0, 210, 255, 0.40)';
+      ctx.lineWidth = 1.2;
+
+      if (isSingleCenter) {
+        // Ondas concêntricas de Faraday
+        for (let r = 1; r <= 5; r++) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, (baseR / 5) * r, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(212, 175, 55, ${0.15 + r * 0.12})`;
+          ctx.stroke();
+        }
+      } else if (resolvedKey === 'vesica_piscis') {
+        const d = baseR * 0.48;
+        ctx.beginPath(); ctx.arc(cx - d, cy, baseR * 0.85, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx + d, cy, baseR * 0.85, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.35)';
+        ctx.beginPath(); ctx.moveTo(cx - d, cy); ctx.lineTo(cx + d, cy); ctx.stroke();
+        const lensH = Math.sqrt(Math.max(0, (baseR * 0.85) ** 2 - d * d));
+        ctx.beginPath(); ctx.moveTo(cx, cy - lensH); ctx.lineTo(cx, cy + lensH); ctx.stroke();
+      } else if (resolvedKey === 'triquetra') {
+        for (let k = 0; k < 3; k++) {
+          const a = (k * 120 - 90) * Math.PI / 180;
+          const px = cx + Math.cos(a) * (baseR * 0.42);
+          const py = cy + Math.sin(a) * (baseR * 0.42);
+          ctx.beginPath(); ctx.arc(px, py, baseR * 0.62, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+        ctx.beginPath(); ctx.arc(cx, cy, baseR * 0.82, 0, Math.PI * 2); ctx.stroke();
+      } else if (resolvedKey === 'cruz_harmonica') {
+        ctx.beginPath(); ctx.arc(cx, cy, baseR, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, baseR * 0.5, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - baseR, cy); ctx.lineTo(cx + baseR, cy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy - baseR); ctx.lineTo(cx, cy + baseR); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.beginPath(); ctx.moveTo(cx - baseR * 0.7, cy - baseR * 0.7); ctx.lineTo(cx + baseR * 0.7, cy + baseR * 0.7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - baseR * 0.7, cy + baseR * 0.7); ctx.lineTo(cx + baseR * 0.7, cy - baseR * 0.7); ctx.stroke();
+      } else if (resolvedKey === 'pentagrama') {
+        ctx.beginPath(); ctx.arc(cx, cy, baseR, 0, Math.PI * 2); ctx.stroke();
+        const starPts = [];
+        for (let k = 0; k < 5; k++) {
+          const a = (k * 72 - 90) * Math.PI / 180;
+          starPts.push({ x: cx + Math.cos(a) * baseR, y: cy + Math.sin(a) * baseR });
+        }
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.55)';
+        ctx.beginPath();
+        for (let k = 0; k < 5; k++) {
+          const next = (k * 2) % 5;
+          if (k === 0) ctx.moveTo(starPts[next].x, starPts[next].y);
+          else ctx.lineTo(starPts[next].x, starPts[next].y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      } else if (resolvedKey === 'semente_vida' || resolvedKey === 'flor_vida_19') {
+        ctx.beginPath(); ctx.arc(cx, cy, baseR * 0.38, 0, Math.PI * 2); ctx.stroke();
+        for (let k = 0; k < 6; k++) {
+          const a = (k * 60) * Math.PI / 180;
+          const px = cx + Math.cos(a) * (baseR * 0.38);
+          const py = cy + Math.sin(a) * (baseR * 0.38);
+          ctx.beginPath(); ctx.arc(px, py, baseR * 0.38, 0, Math.PI * 2); ctx.stroke();
+        }
+        if (resolvedKey === 'flor_vida_19') {
+          for (let k = 0; k < 6; k++) {
+            const a = (k * 60) * Math.PI / 180;
+            const px = cx + Math.cos(a) * (baseR * 0.76);
+            const py = cy + Math.sin(a) * (baseR * 0.76);
+            ctx.beginPath(); ctx.arc(px, py, baseR * 0.38, 0, Math.PI * 2); ctx.stroke();
+          }
+          ctx.beginPath(); ctx.arc(cx, cy, baseR * 1.05, 0, Math.PI * 2); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.arc(cx, cy, baseR * 0.76, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (resolvedKey === 'saraceni_8') {
+        ctx.beginPath(); ctx.arc(cx, cy, baseR, 0, Math.PI * 2); ctx.stroke();
+        const sq1 = [], sq2 = [];
+        for (let k = 0; k < 4; k++) {
+          const a1 = (k * 90) * Math.PI / 180;
+          const a2 = (45 + k * 90) * Math.PI / 180;
+          sq1.push({ x: cx + Math.cos(a1) * baseR, y: cy + Math.sin(a1) * baseR });
+          sq2.push({ x: cx + Math.cos(a2) * baseR, y: cy + Math.sin(a2) * baseR });
+        }
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.45)';
+        ctx.beginPath();
+        sq1.forEach((p, idx) => idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath(); ctx.stroke();
+        ctx.beginPath();
+        sq2.forEach((p, idx) => idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath(); ctx.stroke();
+      } else if (resolvedKey === 'metatron_13') {
+        const r1 = baseR * 0.4, r2 = baseR * 0.8;
+        const centers = [{ x: cx, y: cy }];
+        for (let k = 0; k < 6; k++) {
+          const a = (k * 60) * Math.PI / 180;
+          centers.push({ x: cx + Math.cos(a) * r1, y: cy + Math.sin(a) * r1 });
+          centers.push({ x: cx + Math.cos(a) * r2, y: cy + Math.sin(a) * r2 });
+        }
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        for (let i = 0; i < centers.length; i++) {
+          for (let j = i + 1; j < centers.length; j++) {
+            ctx.beginPath(); ctx.moveTo(centers[i].x, centers[i].y); ctx.lineTo(centers[j].x, centers[j].y); ctx.stroke();
+          }
+        }
+        ctx.strokeStyle = 'rgba(0, 210, 255, 0.35)';
+        centers.forEach(c => {
+          ctx.beginPath(); ctx.arc(c.x, c.y, baseR * 0.18, 0, Math.PI * 2); ctx.stroke();
+        });
+      }
+
+      // 2. Desenho dos Pontos Nodais com Glow e Pulso de Volume
+      const pulse = 1.0 + Math.sin(time * 12) * Math.min(0.35, smoothedVolume * 0.5);
+      pts.forEach(pt => {
+        const px = cx + (pt.x * sacredScale * (w * 0.42));
+        const py = cy + (pt.z * sacredScale * (w * 0.42));
+        const radius = (isSingleCenter ? 5.5 : 4.2) * pulse * (pt.weight || 1.0);
+
+        const grad = ctx.createRadialGradient(px, py, 1, px, py, radius * 2.5);
+        grad.addColorStop(0, 'rgba(212, 175, 55, 0.95)');
+        grad.addColorStop(0.4, 'rgba(0, 210, 255, 0.55)');
+        grad.addColorStop(1, 'rgba(0, 210, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(px, py, radius * 2.5, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(px, py, radius * 0.55, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // Atualiza Badges
+      const badgeHz = document.getElementById('canvas-hz-badge');
+      if (badgeHz) {
+        const curHz = Math.round(effectiveHz);
+        badgeHz.innerText = curHz > 0 ? `${curHz} Hz` : 'Silêncio';
+      }
+      const badgeNodes = document.getElementById('canvas-node-count');
+      if (badgeNodes) {
+        badgeNodes.innerText = `${pts.length} ${pts.length === 1 ? 'Ponto Central' : 'Cruzamentos Nodais'}`;
+      }
+    }
+
+    // ============================================================================
+    // HOLOGRAMA 3D ETÉREO NA MESA (TRAÇADO DAS GEOMETRIAS SOBRE A ÁGUA)
+    // ============================================================================
+    function updateSacredHologram() {
+      if (!sacredHologramGroup) return;
+      while (sacredHologramGroup.children.length > 0) {
+        const obj = sacredHologramGroup.children[0];
+        sacredHologramGroup.remove(obj);
+        if (obj.geometry) obj.geometry.dispose();
+      }
+
+      if (!hologramActive) {
+        sacredHologramGroup.visible = false;
+        return;
+      }
+
+      sacredHologramGroup.visible = true;
+
+      let resolvedKey = activeSacredMatrix;
+      if (activeSacredMatrix === 'auto_atlas') {
+        const modeInfo = getChladniModeForHz(Math.max(currentHz, manualHz));
+        resolvedKey = modeInfo.sacred || 'ponto_central_1';
+      }
+      const matrix = SACRED_MATRICES[resolvedKey] || SACRED_MATRICES['ponto_central_1'];
+      const pts = matrix.points;
+      const halfSize = PARAMS.size / 2;
+
+      const nodeMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.85 });
+      const nodeGeo = new THREE.SphereGeometry(0.12, 12, 12);
+
+      pts.forEach(pt => {
+        const sphere = new THREE.Mesh(nodeGeo, nodeMat);
+        sphere.position.set(pt.x * sacredScale * halfSize * 0.88, 0.08, pt.z * sacredScale * halfSize * 0.88);
+        sacredHologramGroup.add(sphere);
+      });
+    }
 
     // ============================================================================
     // RAIOS GEOMÉTRICOS & CALEIDOSCÓPIO
@@ -1566,26 +1865,98 @@
       document.getElementById('nav-mesa-2').onclick = () => selectMesa('chladni_sand');
       document.getElementById('nav-mesa-3').onclick = () => selectMesa('fusion_cymatic');
 
-      // 2. SELETOR DE MATRIZ SAGRADA DE VIBRAÇÃO
-      const sacredSelect = document.getElementById('sacred-matrix-select');
-      sacredSelect.onchange = (e) => {
-        activeSacredMatrix = e.target.value;
+      // 2. SELETOR DE MATRIZ SAGRADA & ESTÚDIO DUAL (ILUMINAÇÃO + GEOMETRIAS)
+      // Abas do Estúdio Dual
+      const tabBtnLights = document.getElementById('tab-btn-lights');
+      const tabBtnSacred = document.getElementById('tab-btn-sacred');
+      const tabContentLights = document.getElementById('studio-tab-content-lights');
+      const tabContentSacred = document.getElementById('studio-tab-content-sacred');
+
+      if (tabBtnLights && tabBtnSacred) {
+        tabBtnLights.onclick = () => {
+          tabBtnLights.className = "px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-blue-600 text-white shadow-lg flex items-center gap-1.5";
+          tabBtnSacred.className = "px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-400 hover:text-white flex items-center gap-1.5";
+          tabContentLights.classList.remove('hidden');
+          tabContentSacred.classList.add('hidden');
+        };
+        tabBtnSacred.onclick = () => {
+          tabBtnSacred.className = "px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg flex items-center gap-1.5";
+          tabBtnLights.className = "px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-400 hover:text-white flex items-center gap-1.5";
+          tabContentSacred.classList.remove('hidden');
+          tabContentLights.classList.add('hidden');
+          drawSacredGeometryCanvas();
+        };
+      }
+
+      // Slider de Abertura / Escala da Geometria Sagrada
+      const sliderScale = document.getElementById('slider-sacred-scale');
+      const lblScale = document.getElementById('lbl-sacred-scale');
+      if (sliderScale) {
+        sliderScale.oninput = (e) => {
+          sacredScale = parseFloat(e.target.value);
+          const percent = Math.round(sacredScale * 100);
+          let labelDesc = "Normal";
+          if (sacredScale < 0.6) labelDesc = "Compacto / Núcleo";
+          else if (sacredScale > 1.4) labelDesc = "Expandido / Total";
+          lblScale.innerText = `${percent}% (${labelDesc})`;
+          drawSacredGeometryCanvas();
+          updateSacredHologram();
+        };
+      }
+
+      // Toggle Holograma 3D sobre a mesa
+      const btnHologram = document.getElementById('toggle-hologram-btn');
+      if (btnHologram) {
+        btnHologram.onclick = () => {
+          hologramActive = !hologramActive;
+          btnHologram.innerText = hologramActive ? "Holograma: ON" : "Holograma: OFF";
+          btnHologram.className = hologramActive 
+            ? "px-3 py-1.5 rounded-xl bg-cyan-500 text-black font-black uppercase tracking-wider shadow-[0_0_15px_rgba(0,210,255,0.5)] transition-all text-[8px]" 
+            : "px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[8px] font-black uppercase hover:bg-cyan-500/30 transition-all";
+          updateSacredHologram();
+        };
+      }
+
+      // Seletor de Matriz Sagrada no Modal
+      const modalSacredSelect = document.getElementById('modal-sacred-select');
+      const sidebarSacredSelect = document.getElementById('sacred-matrix-select');
+
+      function onSacredMatrixChange(val) {
+        activeSacredMatrix = val;
+        if (modalSacredSelect) modalSacredSelect.value = val;
+        if (sidebarSacredSelect) sidebarSacredSelect.value = val;
         updateSacredHUD();
-      };
+        drawSacredGeometryCanvas();
+        updateSacredHologram();
+      }
+
+      if (modalSacredSelect) modalSacredSelect.onchange = (e) => onSacredMatrixChange(e.target.value);
+      if (sidebarSacredSelect) sidebarSacredSelect.onchange = (e) => onSacredMatrixChange(e.target.value);
 
       function updateSacredHUD() {
         const hudBadge = document.getElementById('hud-sacred-badge');
         const infoBox = document.getElementById('sacred-info-box');
+        const modalInfo = document.getElementById('modal-sacred-info');
         
+        let resolvedKey = activeSacredMatrix;
         if (activeSacredMatrix === 'auto_atlas') {
-          hudBadge.innerText = "⚡ AUTO: Ressonância Atlas";
-          infoBox.innerHTML = '<span class="text-[#d4af37] font-black uppercase block mb-0.5">Ressonância Automática:</span>A geometria sagrada vibra em sincronia direta com a frequência acústica ativa no Atlas Hz.';
+          const effectiveHz = Math.max(currentHz, manualHz);
+          const modeInfo = getChladniModeForHz(effectiveHz);
+          resolvedKey = modeInfo.sacred || 'ponto_central_1';
+        }
+
+        const mat = SACRED_MATRICES[resolvedKey] || SACRED_MATRICES['ponto_central_1'];
+
+        if (activeSacredMatrix === 'auto_atlas') {
+          if (hudBadge) hudBadge.innerText = "⚡ AUTO: Ressonância Atlas";
+          const desc = `<span class="text-[#d4af37] font-black uppercase block mb-0.5">Ressonância Automática:</span>Sincronizado ativamente com Atlas Hz. Padrão atual: ${mat.name} (${mat.points.length} nós de vibração).`;
+          if (infoBox) infoBox.innerHTML = desc;
+          if (modalInfo) modalInfo.innerHTML = desc;
         } else {
-          const mat = SACRED_MATRICES[activeSacredMatrix];
-          if (mat) {
-            hudBadge.innerText = `${mat.icon} ${mat.name}`;
-            infoBox.innerHTML = `<span class="text-[#d4af37] font-black uppercase block mb-0.5">${mat.name}:</span>${mat.description} (${mat.points.length} pontos nodais de excitação).`;
-          }
+          if (hudBadge) hudBadge.innerText = `${mat.icon} ${mat.name}`;
+          const desc = `<span class="text-[#d4af37] font-black uppercase block mb-0.5">${mat.name}:</span>${mat.description} (${mat.points.length} nós de excitação).`;
+          if (infoBox) infoBox.innerHTML = desc;
+          if (modalInfo) modalInfo.innerHTML = desc;
         }
       }
 
@@ -1943,14 +2314,24 @@
         mat.emissiveIntensity = PARAMS.proBloom ? 1.4 : 0.35;
       }
 
-      // 3. FÍSICA ESPECÍFICA DAS 3 MESAS
+      // ----------------------------------------------------------------------
+      // 3. FÍSICA DAS 3 MESAS COM SOLVER HIDRODINÂMICO 2D REAL (ZERO LAG / 60FPS)
+      // ----------------------------------------------------------------------
       const pos = plateGeometry.attributes.position.array;
       const gRes = res + 1;
       const halfSize = PARAMS.size / 2;
 
+      // Atualiza o Observatório 2D a cada quadro (pulsação orgânica)
+      drawSacredGeometryCanvas();
+
+      // Cálculo de volume ativo e escala por frequência
+      let fluidVol = Math.min(1.0, smoothedVolume * (PARAMS.gain / 35.0));
+      const freqScale = Math.min(1.0, Math.sqrt(350.0 / Math.max(100.0, effectiveHz || 432)));
+      fluidVol *= freqScale;
+
       if (activeMesa === 'chladni_sand') {
         // ====================================================================
-        // MESA 2: PLACA DE CHLADNI COM 28.000 MICROGRÃOS DE AREIA
+        // MESA 2: PLACA DE CHLADNI COM 28.000 MICROGRÃOS DE AREIA REAIS
         // ====================================================================
         updateSandPhysics(Math.max(effectiveHz, 110), Math.max(smoothedVolume, isPresetActive || manualHz > 0 ? 0.8 : 0.0));
 
@@ -1963,109 +2344,122 @@
           pos[i + 1] = cVal * Math.sin(time * 25) * Math.min(smoothedVolume * 0.12, 0.25);
         }
 
-      } else if (activeMesa === 'fusion_cymatic') {
+      } else {
         // ====================================================================
-        // MESA 3: FUSÃO HÍBRIDA (CHLADNI ACOPLADO COM SOLVER DE ONDAS 2D)
+        // MESAS 1 & 3: SOLVER DE ONDAS 2D (CAPILAR-GRAVITACIONAL COM PML RADIAL)
         // ====================================================================
-        const damping = 0.94 + PARAMS.responseMemory * 0.045;
-        const waveSpeed = 0.18;
-        const activeAmp = Math.min(smoothedVolume * 0.45, 1.8);
+        
+        // 1. Resolução da Matriz Sagrada Ativa e Abertura
+        let resolvedKey = activeSacredMatrix;
+        if (activeSacredMatrix === 'auto_atlas') {
+          resolvedKey = modeInfo.sacred || 'ponto_central_1';
+        }
+        const matrix = SACRED_MATRICES[resolvedKey] || SACRED_MATRICES['ponto_central_1'];
+        const pts = matrix.points;
+        const isSingleCenter = (pts.length === 1 && pts[0].x === 0 && pts[0].z === 0);
 
-        if (activeAmp > 0.002 && effectiveHz > 5) {
-          const osc = Math.sin(time * 14);
-          for (let y = 1; y < gRes - 1; y++) {
-            const nz = (y / res) * 2 - 1;
-            for (let x = 1; x < gRes - 1; x++) {
-              const nx = (x / res) * 2 - 1;
-              const idx = y * gRes + x;
+        // 2. Excitação dos Pontos Nodais em hField
+        if (fluidVol > 0.0005 && effectiveHz > 5) {
+          const bp = time * Math.min(3000, Math.max(20, effectiveHz)) * 0.012;
 
-              const cVal = Math.abs(evalChladni(nx, nz, modeInfo.m, modeInfo.n, modeInfo.sign));
-              if (cVal < 0.085) {
-                const microStrength = (0.085 - cVal) / 0.085;
-                hField[idx] += osc * microStrength * activeAmp * 0.16;
+          if (isSingleCenter) {
+            // 1 Ponto Central Puro: injeção central com dispersão suave (raio 2 células)
+            const cx = Math.floor(res / 2);
+            const cy = Math.floor(res / 2);
+            for (let dy = -2; dy <= 2; dy++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                const d2 = dx * dx + dy * dy;
+                if (d2 <= 5) {
+                  const weight = Math.exp(-d2 / 2.2);
+                  const idx = (cy + dy) * gRes + (cx + dx);
+                  hField[idx] += Math.sin(bp) * fluidVol * weight * 0.42;
+                }
+              }
+            }
+          } else {
+            // Matriz Sagrada: cada nó geométrico injeta energia na malha d'água
+            for (let p = 0; p < pts.length; p++) {
+              const pt = pts[p];
+              // Coordenadas escaladas pela abertura:
+              const cx = Math.round((0.5 + pt.x * sacredScale * 0.42) * res);
+              const cy = Math.round((0.5 + pt.z * sacredScale * 0.42) * res);
+              if (cx >= 2 && cx < res - 2 && cy >= 2 && cy < res - 2) {
+                const impulse = Math.sin(bp + (pt.phase || 0)) * fluidVol * (pt.weight || 1.0) * 0.35;
+                for (let dy = -1; dy <= 1; dy++) {
+                  for (let dx = -1; dx <= 1; dx++) {
+                    const idx = (cy + dy) * gRes + (cx + dx);
+                    const w = (dx === 0 && dy === 0) ? 1.0 : 0.5;
+                    hField[idx] += impulse * w;
+                  }
+                }
+              }
+            }
+          }
+
+          // Se for Mesa 3 (Fusão Híbrida), injeta excitação nodal de Chladni acoplada
+          if (activeMesa === 'fusion_cymatic') {
+            const osc = Math.sin(time * 16);
+            for (let y = 2; y < gRes - 2; y += 2) {
+              const nz = (y / res) * 2 - 1;
+              const row = y * gRes;
+              for (let x = 2; x < gRes - 2; x += 2) {
+                const nx = (x / res) * 2 - 1;
+                const cVal = Math.abs(evalChladni(nx, nz, modeInfo.m, modeInfo.n, modeInfo.sign));
+                if (cVal < 0.12) {
+                  const strength = (0.12 - cVal) / 0.12;
+                  hField[row + x] += osc * strength * fluidVol * 0.18;
+                }
               }
             }
           }
         }
 
-        // Propagação de onda discreta 2D
+        // 3. Propagação de Onda Discreta 2D (Laplaciano Isotrópico de 2ª Ordem) com PML
+        const ds = 0.985 - (PARAMS.stability || 0) * 0.005;
+        const ws = 0.12 + (PARAMS.stability || 0) * 0.04;
         for (let y = 1; y < gRes - 1; y++) {
+          const row = y * gRes;
+          const normY = (y / res) * 2 - 1;
           for (let x = 1; x < gRes - 1; x++) {
-            const idx = y * gRes + x;
-            const laplacian = (hField[idx - 1] + hField[idx + 1] + hField[idx - gRes] + hField[idx + gRes]) * 0.25 - hField[idx];
-            vField[idx] = (vField[idx] + laplacian * waveSpeed) * damping;
-          }
-        }
-        for (let idx = 0; idx < total; idx++) {
-          hField[idx] += vField[idx];
-          hField[idx] *= 0.985;
-        }
+            const i = row + x;
+            const normX = (x / res) * 2 - 1;
+            const rNorm = Math.sqrt(normX * normX + normY * normY);
 
-        for (let i = 0; i < pos.length; i += 3) {
-          const x = originalPositions[i], z = originalPositions[i + 2];
-          const idx = i / 3;
-          pos[i] = x;
-          pos[i + 2] = z;
-          pos[i + 1] = hField[idx] * 3.2 * Math.min(1.0, smoothedVolume * 8.0);
-        }
-
-      } else {
-        // ====================================================================
-        // MESA 1: ÁGUA PURA — MATRIZ SAGRADA DE VIBRAÇÃO & PONTO CENTRAL ÚNICO
-        // ====================================================================
-        const f = (effectiveHz * 0.0032) + 1.15;
-        
-        // Resolve matriz sagrada ativa (manual ou ressonância com Atlas)
-        let resolvedMatrixKey = activeSacredMatrix;
-        if (activeSacredMatrix === 'auto_atlas') {
-          resolvedMatrixKey = modeInfo.sacred || 'ponto_central_1';
-        }
-        const matrix = SACRED_MATRICES[resolvedMatrixKey] || SACRED_MATRICES['ponto_central_1'];
-        const pts = matrix.points;
-        const isSingleCenter = (pts.length === 1 && pts[0].x === 0 && pts[0].z === 0);
-
-        for (let i = 0; i < pos.length; i += 3) {
-          const x = originalPositions[i], z = originalPositions[i + 2];
-          const r = Math.sqrt(x * x + z * z);
-          let wave = 0;
-
-          if (isSingleCenter) {
-            // Foco Central Único: Onda concêntrica pura com envelope de Faraday
-            const radialEnvelope = Math.exp(-r * 0.065);
-            wave = Math.sin(f * r - time * 6.5) * Math.cos(f * x * 0.65) * Math.cos(f * z * 0.65) * radialEnvelope;
-          } else {
-            // Matriz Sagrada Multi-Nodal: Interferência exata dos cruzamentos geométricos
-            let sum = 0, weightSum = 0;
-            for (let p = 0; p < pts.length; p++) {
-              const pt = pts[p];
-              const px = pt.x * halfSize, pz = pt.z * halfSize;
-              const dx = x - px, dz = z - pz;
-              const d = Math.sqrt(dx * dx + dz * dz);
-              const env = Math.exp(-d * 0.11);
-              sum += Math.sin(f * d - time * 6.5 + pt.phase) * pt.weight * env;
-              weightSum += pt.weight;
+            let edgeDamp = ds;
+            if (rNorm > 0.82) {
+              const pml = (rNorm - 0.82) / 0.18;
+              edgeDamp *= Math.max(0.65, 1.0 - pml * 0.35);
             }
-            wave = (sum / (weightSum || 1)) * 1.5;
-          }
 
-          if (PARAMS.physFluid) {
-            pos[i] = x + Math.sin(time * 0.6 + r) * 0.12 * (smoothedVolume * 0.2);
-            pos[i + 2] = z + Math.cos(time * 0.6 + r) * 0.12 * (smoothedVolume * 0.2);
+            vField[i] = (vField[i] + ((hField[i - 1] + hField[i + 1] + hField[i - gRes] + hField[i + gRes]) * 0.25 - hField[i]) * ws) * edgeDamp;
+          }
+        }
+        for (let i = 0; i < total; i++) {
+          hField[i] += vField[i];
+        }
+
+        // 4. Mapeamento Direto nos Vértices (Ultra Rápido, Zero Transcendental na Malha)
+        const dispScale = (12.0 + (PARAMS.stability || 0) * 18.0) * (PARAMS.gain / 35.0);
+        for (let i = 0; i < pos.length; i += 3) {
+          const idx = i / 3;
+          const ox = originalPositions[i], oz = originalPositions[i + 2];
+          pos[i] = ox;
+          pos[i + 2] = oz;
+
+          if (fluidVol < 0.0005) {
+            // Silêncio: colapso instantâneo para o espelho perfeitamente plano
+            pos[i + 1] = 0.0;
           } else {
-            pos[i] = x;
-            pos[i + 2] = z;
+            let h = hField[idx] * dispScale;
+            if (activeMesa === 'fusion_cymatic') {
+              const nx = ox / halfSize, nz = oz / halfSize;
+              const u_node = evalChladni(nx, nz, modeInfo.m, modeInfo.n, modeInfo.sign);
+              const nodalSource = Math.exp(-(u_node * u_node) / 0.08) * Math.sin(time * 18) * fluidVol * 0.35;
+              pos[i + 1] = h * 0.65 + nodalSource * 0.35;
+            } else {
+              pos[i + 1] = h;
+            }
           }
-
-          if (PARAMS.physMulti) {
-            lights.forEach(l => {
-              let dx = x - l.light.position.x, dz = z - l.light.position.z;
-              let dist = Math.sqrt(dx * dx + dz * dz);
-              wave += Math.sin(f * dist - time * 4) * (l.rawIntensity / 500);
-            });
-          }
-
-          // Silêncio: a água fica plana se não houver som
-          pos[i + 1] = wave * (smoothedVolume * 1.45);
         }
       }
 
