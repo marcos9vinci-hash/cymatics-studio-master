@@ -1,0 +1,536 @@
+{
+  "ponto_central_1": {
+    "name": "Ponto Central Único (1 Ponto - CymaScope Puro)",
+    "description": "Foco único central no transdutor piezoelétrico. Onda concêntrica pura sem interferência espúria.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.0,
+        "weight": 1.0,
+        "phase": 0.0
+      }
+    ]
+  },
+  "vesica_piscis": {
+    "name": "Vesica Piscis (Dualidade & Mandorla Sagrada)",
+    "description": "Dois focos circulares entrelaçados e os cruzamentos da lente cósmica.",
+    "points": [
+      {
+        "x": -0.16,
+        "z": 0.0,
+        "weight": 0.85,
+        "phase": 0.0
+      },
+      {
+        "x": 0.16,
+        "z": 0.0,
+        "weight": 0.85,
+        "phase": 0.0
+      },
+      {
+        "x": 0.0,
+        "z": 0.27712812921102037,
+        "weight": 0.5,
+        "phase": 1.5707963267948966
+      },
+      {
+        "x": 0.0,
+        "z": -0.27712812921102037,
+        "weight": 0.5,
+        "phase": 1.5707963267948966
+      }
+    ]
+  },
+  "triquetra": {
+    "name": "Triquetra / Trindade Sagrada (3 Centros a 120°)",
+    "description": "Geometria triangular trina com 3 vértices acústicos e cruzamento central.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.38,
+        "weight": 0.75,
+        "phase": 0.0
+      },
+      {
+        "x": -0.3291,
+        "z": -0.19,
+        "weight": 0.75,
+        "phase": 1.0471975511965976
+      },
+      {
+        "x": 0.3291,
+        "z": -0.19,
+        "weight": 0.75,
+        "phase": 2.0943951023931953
+      },
+      {
+        "x": 0.1481,
+        "z": 0.0855,
+        "weight": 0.45,
+        "phase": 0.0
+      },
+      {
+        "x": -0.1481,
+        "z": 0.0855,
+        "weight": 0.45,
+        "phase": 0.0
+      },
+      {
+        "x": -0.0,
+        "z": -0.171,
+        "weight": 0.45,
+        "phase": 0.0
+      }
+    ]
+  },
+  "cruz_harmonica": {
+    "name": "Cruz Harmônica / Tetraedro (4 Quadrantes)",
+    "description": "Equilíbrio de 4 quadrantes cardeais com centro de gravidade neutro.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.0,
+        "weight": 0.9,
+        "phase": 0.0
+      },
+      {
+        "x": 0.4,
+        "z": 0.0,
+        "weight": 0.65,
+        "phase": 0.7853981633974483
+      },
+      {
+        "x": -0.4,
+        "z": 0.0,
+        "weight": 0.65,
+        "phase": 0.7853981633974483
+      },
+      {
+        "x": 0.0,
+        "z": 0.4,
+        "weight": 0.65,
+        "phase": 0.7853981633974483
+      },
+      {
+        "x": 0.0,
+        "z": -0.4,
+        "weight": 0.65,
+        "phase": 0.7853981633974483
+      }
+    ]
+  },
+  "pentagrama": {
+    "name": "Pentagrama Sagrado (Proporção Áurea Phi = 1.618)",
+    "description": "5 vértices e 5 cruzamentos interiores derivados estritamente da Razão Áurea.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.44,
+        "weight": 0.7,
+        "phase": 0.0
+      },
+      {
+        "x": -0.4185,
+        "z": 0.136,
+        "weight": 0.7,
+        "phase": 0.6283185307179586
+      },
+      {
+        "x": -0.2586,
+        "z": -0.356,
+        "weight": 0.7,
+        "phase": 1.2566370614359172
+      },
+      {
+        "x": 0.2586,
+        "z": -0.356,
+        "weight": 0.7,
+        "phase": 1.8849555921538759
+      },
+      {
+        "x": 0.4185,
+        "z": 0.136,
+        "weight": 0.7,
+        "phase": 2.5132741228718345
+      },
+      {
+        "x": -0.0988,
+        "z": 0.136,
+        "weight": 0.45,
+        "phase": 0.0
+      },
+      {
+        "x": -0.1598,
+        "z": -0.0519,
+        "weight": 0.45,
+        "phase": 0.0
+      },
+      {
+        "x": -0.0,
+        "z": -0.1681,
+        "weight": 0.45,
+        "phase": 0.0
+      },
+      {
+        "x": 0.1598,
+        "z": -0.0519,
+        "weight": 0.45,
+        "phase": 0.0
+      },
+      {
+        "x": 0.0988,
+        "z": 0.136,
+        "weight": 0.45,
+        "phase": 0.0
+      }
+    ]
+  },
+  "semente_vida": {
+    "name": "Semente da Vida (Gênese Hexagonal - 7 Centros)",
+    "description": "A matriz primária de 7 círculos que desdobra a geometria da criação biológica.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.0,
+        "weight": 1.0,
+        "phase": 0.0
+      },
+      {
+        "x": 0.36,
+        "z": 0.0,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": 0.18,
+        "z": 0.3118,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": -0.18,
+        "z": 0.3118,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": -0.36,
+        "z": 0.0,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": -0.18,
+        "z": -0.3118,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": 0.18,
+        "z": -0.3118,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": 0.27,
+        "z": 0.1559,
+        "weight": 0.4,
+        "phase": 1.0471975511965976
+      },
+      {
+        "x": 0.0,
+        "z": 0.3118,
+        "weight": 0.4,
+        "phase": 1.0471975511965976
+      },
+      {
+        "x": -0.27,
+        "z": 0.1559,
+        "weight": 0.4,
+        "phase": 1.0471975511965976
+      },
+      {
+        "x": -0.27,
+        "z": -0.1559,
+        "weight": 0.4,
+        "phase": 1.0471975511965976
+      },
+      {
+        "x": -0.0,
+        "z": -0.3118,
+        "weight": 0.4,
+        "phase": 1.0471975511965976
+      },
+      {
+        "x": 0.27,
+        "z": -0.1559,
+        "weight": 0.4,
+        "phase": 1.0471975511965976
+      }
+    ]
+  },
+  "saraceni_8": {
+    "name": "Octograma de Saraceni (8 Tronos / Estrela 8 Pontas)",
+    "description": "O padrão octogonal sagrado que ancora as 7 linhas cósmicas e o trono regente.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.0,
+        "weight": 1.0,
+        "phase": 0.0
+      },
+      {
+        "x": 0.42,
+        "z": 0.0,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": 0.297,
+        "z": 0.297,
+        "weight": 0.6,
+        "phase": 0.7853981633974483
+      },
+      {
+        "x": 0.0,
+        "z": 0.42,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": -0.297,
+        "z": 0.297,
+        "weight": 0.6,
+        "phase": 0.7853981633974483
+      },
+      {
+        "x": -0.42,
+        "z": 0.0,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": -0.297,
+        "z": -0.297,
+        "weight": 0.6,
+        "phase": 0.7853981633974483
+      },
+      {
+        "x": -0.0,
+        "z": -0.42,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": 0.297,
+        "z": -0.297,
+        "weight": 0.6,
+        "phase": 0.7853981633974483
+      }
+    ]
+  },
+  "metatron_13": {
+    "name": "Cubo de Metatron / Fruto da Vida (13 Centros Esféricos)",
+    "description": "Os 13 centros nodais esféricos de onde nascem todos os 5 Sólidos Platônicos.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.0,
+        "weight": 1.0,
+        "phase": 0.0
+      },
+      {
+        "x": 0.26,
+        "z": 0.0,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": 0.13,
+        "z": 0.2252,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": -0.13,
+        "z": 0.2252,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": -0.26,
+        "z": 0.0,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": -0.13,
+        "z": -0.2252,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": 0.13,
+        "z": -0.2252,
+        "weight": 0.65,
+        "phase": 0.0
+      },
+      {
+        "x": 0.52,
+        "z": 0.0,
+        "weight": 0.45,
+        "phase": 0.5235987755982988
+      },
+      {
+        "x": 0.26,
+        "z": 0.4503,
+        "weight": 0.45,
+        "phase": 0.5235987755982988
+      },
+      {
+        "x": -0.26,
+        "z": 0.4503,
+        "weight": 0.45,
+        "phase": 0.5235987755982988
+      },
+      {
+        "x": -0.52,
+        "z": 0.0,
+        "weight": 0.45,
+        "phase": 0.5235987755982988
+      },
+      {
+        "x": -0.26,
+        "z": -0.4503,
+        "weight": 0.45,
+        "phase": 0.5235987755982988
+      },
+      {
+        "x": 0.26,
+        "z": -0.4503,
+        "weight": 0.45,
+        "phase": 0.5235987755982988
+      }
+    ]
+  },
+  "flor_vida_19": {
+    "name": "Flor da Vida Expandida (19 Centros)",
+    "description": "Rede completa de 19 centros esféricos de ressonância harmônica total.",
+    "points": [
+      {
+        "x": 0.0,
+        "z": 0.0,
+        "weight": 1.0,
+        "phase": 0.0
+      },
+      {
+        "x": 0.24,
+        "z": 0.0,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": 0.12,
+        "z": 0.2078,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": -0.12,
+        "z": 0.2078,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": -0.24,
+        "z": 0.0,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": -0.12,
+        "z": -0.2078,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": 0.12,
+        "z": -0.2078,
+        "weight": 0.6,
+        "phase": 0.0
+      },
+      {
+        "x": 0.48,
+        "z": 0.0,
+        "weight": 0.4,
+        "phase": 0.0
+      },
+      {
+        "x": 0.24,
+        "z": 0.4157,
+        "weight": 0.4,
+        "phase": 0.0
+      },
+      {
+        "x": -0.24,
+        "z": 0.4157,
+        "weight": 0.4,
+        "phase": 0.0
+      },
+      {
+        "x": -0.48,
+        "z": 0.0,
+        "weight": 0.4,
+        "phase": 0.0
+      },
+      {
+        "x": -0.24,
+        "z": -0.4157,
+        "weight": 0.4,
+        "phase": 0.0
+      },
+      {
+        "x": 0.24,
+        "z": -0.4157,
+        "weight": 0.4,
+        "phase": 0.0
+      },
+      {
+        "x": 0.36,
+        "z": 0.2078,
+        "weight": 0.35,
+        "phase": 0.0
+      },
+      {
+        "x": 0.0,
+        "z": 0.4157,
+        "weight": 0.35,
+        "phase": 0.0
+      },
+      {
+        "x": -0.36,
+        "z": 0.2078,
+        "weight": 0.35,
+        "phase": 0.0
+      },
+      {
+        "x": -0.36,
+        "z": -0.2078,
+        "weight": 0.35,
+        "phase": 0.0
+      },
+      {
+        "x": -0.0,
+        "z": -0.4157,
+        "weight": 0.35,
+        "phase": 0.0
+      },
+      {
+        "x": 0.36,
+        "z": -0.2078,
+        "weight": 0.35,
+        "phase": 0.0
+      }
+    ]
+  }
+}

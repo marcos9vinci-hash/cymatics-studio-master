@@ -1,0 +1,2099 @@
+import os
+import json
+
+print("=== CONSTRUINDO BUILDER CYMATICS MASTER DEFINITIVO ===")
+
+html_content = r'''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cymatics Studio Master 3D - Água Espelho Negro + Grãos de Chladni + Matriz Sagrada</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background-color: #020204;
+      color: #f1f5f9;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    canvas { display: block; }
+
+    .glass-ui {
+      background: rgba(6, 6, 12, 0.92);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95);
+      transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .ui-hidden-right { transform: translateX(calc(100% + 60px)) !important; opacity: 0 !important; pointer-events: none; }
+    .ui-hidden-left { transform: translateX(calc(-100% - 60px)) !important; opacity: 0 !important; pointer-events: none; }
+    .ui-hidden-top { transform: translateY(calc(-100% - 60px)) !important; opacity: 0 !important; pointer-events: none; }
+
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 10px; }
+
+    input[type="range"] {
+      accent-color: #3b82f6;
+      cursor: pointer;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: #d4af37;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.7);
+    }
+
+    input[type="color"] {
+      appearance: none;
+      border: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 50%; }
+
+    .mesa-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 6px 12px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.25s ease;
+      color: #94a3b8;
+    }
+    .mesa-pill:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+    }
+    .mesa-pill.active {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(212, 175, 55, 0.25));
+      border-color: #d4af37;
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.3);
+    }
+
+    .drawer-btn {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .drawer-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+    .drawer-btn.open {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #ffffff;
+    }
+
+    .drawer-content {
+      display: none;
+      padding: 12px 6px;
+    }
+    .drawer-content.open { display: block; }
+
+    .toggle-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: #94a3b8;
+      border-radius: 8px;
+      font-size: 8px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 6px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .toggle-btn:hover { background: rgba(255, 255, 255, 0.08); color: #ffffff; }
+    .toggle-btn.active {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: #3b82f6;
+      color: #93c5fd;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 7px 4px;
+      text-align: center;
+      font-size: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .preset-btn:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.2); }
+    .preset-btn.active {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(59, 130, 246, 0.25));
+      border-color: #d4af37;
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+    }
+
+    .light-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.2s ease;
+    }
+    .light-card:hover { border-color: rgba(255, 255, 255, 0.25); }
+    .light-card.active {
+      border-color: #d4af37;
+      background: rgba(212, 175, 55, 0.10);
+      box-shadow: 0 0 14px rgba(212, 175, 55, 0.2);
+    }
+
+    #btn-toggle-ui {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(6, 6, 12, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    }
+    #btn-toggle-ui:hover {
+      background: rgba(59, 130, 246, 0.3);
+      border-color: #3b82f6;
+      transform: scale(1.08);
+    }
+
+    .session-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.2s ease;
+    }
+    .session-overlay.active { opacity: 1; pointer-events: auto; }
+  </style>
+</head>
+<body>
+
+  <!-- MODAL NOVA LUZ -->
+  <div id="color-modal" class="fixed inset-0 p-6 hidden z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center">
+    <div class="bg-[#0b0b14] p-7 rounded-3xl border border-white/15 w-full max-w-xs space-y-5 text-center shadow-2xl">
+      <h3 class="text-xs font-black uppercase tracking-widest text-blue-400">Nova Luz Direcional / Spot</h3>
+      <input type="color" id="new-light-color" value="#3b82f6" class="w-16 h-16 mx-auto block">
+      <div class="flex gap-3">
+        <button id="cancel-color" class="flex-1 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-bold uppercase">Cancelar</button>
+        <button id="confirm-color" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-[10px] font-bold uppercase">Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FLUTUANTE: LUMINÁRIA & ESTÚDIO DE LUZES 3D (CONTROLE SEPARADO) -->
+  <div id="modal-lights-studio" class="fixed top-20 right-6 w-[380px] max-h-[85vh] glass-ui rounded-3xl z-[150] p-5 hidden flex-col shadow-2xl overflow-hidden">
+    <div class="flex justify-between items-center pb-3 mb-3 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <span class="text-base">💡</span>
+        <div>
+          <h3 class="text-xs font-black uppercase tracking-widest text-white">Luminária & Estúdio 3D</h3>
+          <p class="text-[8px] text-[#d4af37] font-bold uppercase">Aproxime / Afaste & Mude o Ângulo</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="add-light-modal-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg text-[8px] font-black uppercase">+ Nova Luz</button>
+        <button id="close-lights-modal" class="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/50 hover:text-white">✕</button>
+      </div>
+    </div>
+
+    <div class="space-y-3 overflow-y-auto custom-scroll pr-1 flex-1">
+      <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl text-[8px] text-gray-300 font-bold">
+        <span>Marcador Visual na Mesa:</span>
+        <button id="toggle-light-helpers" class="px-2 py-0.5 rounded bg-white/10 text-gray-300 border border-white/20">Bolinhas 3D: OFF</button>
+      </div>
+
+      <div>
+        <div class="text-[8px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Luminárias Ativas (Selecione & Regule):</div>
+        <div id="lights-list-modal" class="space-y-2"></div>
+      </div>
+
+      <div class="pt-2 border-t border-white/10">
+        <div class="text-[8px] font-black uppercase tracking-widest text-[#d4af37] mb-1.5">⚡ Raios Geométricos & Caleidoscópio:</div>
+        <div>
+          <div class="flex justify-between text-[9px] font-bold mb-1">
+            <span class="text-gray-400 uppercase">Nº de Raios (0 a 33)</span>
+            <span id="modal-val-rays" class="text-blue-400">0</span>
+          </div>
+          <input type="range" id="modal-input-rays" min="0" max="33" step="1" value="0" class="w-full">
+        </div>
+        <div class="grid grid-cols-3 gap-1 mt-2">
+          <button id="modal-btn-ray-pulse" class="toggle-btn">Pulsar</button>
+          <button id="modal-btn-ray-rotate" class="toggle-btn">Girar</button>
+          <button id="modal-btn-ray-cycle" class="toggle-btn">Cores</button>
+          <button id="modal-btn-ray-8" class="toggle-btn">8 Loop</button>
+          <button id="modal-btn-ray-vortex" class="toggle-btn">Vortex</button>
+          <button id="modal-btn-ray-jump" class="toggle-btn">Salto</button>
+        </div>
+        <button id="modal-btn-ray-kaleido" class="toggle-btn w-full bg-blue-500/20 border-blue-500/40 py-1.5 mt-1.5">Caleidoscópio Original</button>
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <div>
+            <div class="flex justify-between text-[8px] font-bold mb-0.5"><span class="text-gray-400">Alcance</span><span id="modal-val-ray-dist" class="text-blue-400">55%</span></div>
+            <input type="range" id="modal-input-ray-dist" min="5" max="100" value="55" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-[8px] font-bold mb-0.5"><span class="text-gray-400">Força Luz</span><span id="modal-val-ray-int" class="text-blue-400">45</span></div>
+            <input type="range" id="modal-input-ray-int" min="0" max="150" value="45" class="w-full">
+          </div>
+        </div>
+        <div id="modal-ray-colors" class="flex flex-wrap gap-1 pt-1.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CENTRAL: INICIALIZADOR DE TODOS OS APPS CIMATIC (CATÁLOGO) -->
+  <div id="modal-launcher" class="fixed inset-0 p-6 hidden z-[240] bg-black/85 backdrop-blur-md flex items-center justify-center">
+    <div class="bg-[#0b0b14] p-7 rounded-3xl border border-white/15 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+      <div class="flex justify-between items-center pb-4 mb-4 border-b border-white/10">
+        <div>
+          <h2 class="text-sm font-black uppercase tracking-widest text-cyan-400">Catálogo Cymatics Studio</h2>
+          <p class="text-[9px] text-[#d4af37] font-bold uppercase">Inicializador de Todos os Aplicativos</p>
+        </div>
+        <button id="close-launcher" class="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3 overflow-y-auto custom-scroll pr-1 flex-1">
+        <a href="http://localhost:8080/apps_historicos/cimatic3visualperfeito.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-blue-600/20 border border-white/10 hover:border-blue-400 transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-[9px] font-black text-cyan-400 uppercase">01. Visual Perfeito</div>
+            <p class="text-[8px] text-gray-400 mt-1">Espelho Negro puro de alta reflexão. Referência de acabamento óptico.</p>
+          </div>
+          <span class="text-[8px] text-cyan-300 font-bold mt-2">Abrir App ↗</span>
+        </a>
+        <a href="http://localhost:8080/apps_historicos/cimatic4mesatopluzfraca.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-blue-600/20 border border-white/10 hover:border-blue-400 transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-[9px] font-black text-blue-400 uppercase">02. Mesa Top Luz Fraca</div>
+            <p class="text-[8px] text-gray-400 mt-1">Calibração de iluminação suave com controle de até 33 raios caleidoscópicos.</p>
+          </div>
+          <span class="text-[8px] text-blue-300 font-bold mt-2">Abrir App ↗</span>
+        </a>
+        <a href="http://localhost:8080/apps_historicos/cimaticaguafluida.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-emerald-600/20 border border-white/10 hover:border-emerald-400 transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-[9px] font-black text-emerald-400 uppercase">03. Água Física Mesotópica</div>
+            <p class="text-[8px] text-gray-400 mt-1">Dinâmica de fluidos natural. Ondas concêntricas puras.</p>
+          </div>
+          <span class="text-[8px] text-emerald-300 font-bold mt-2">Abrir App ↗</span>
+        </a>
+        <a href="http://localhost:8080/apps_historicos/cimatic5.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-purple-600/20 border border-white/10 hover:border-purple-400 transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-[9px] font-black text-purple-400 uppercase">04. Cimatic 5 (Raios)</div>
+            <p class="text-[8px] text-gray-400 mt-1">Sistema modular de raios caleidoscópicos sincronizados com Hz.</p>
+          </div>
+          <span class="text-[8px] text-purple-300 font-bold mt-2">Abrir App ↗</span>
+        </a>
+        <a href="http://localhost:8080/apps_historicos/cimatic6dj.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-pink-600/20 border border-white/10 hover:border-pink-400 transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-[9px] font-black text-pink-400 uppercase">05. Cimatic 6 DJ Console</div>
+            <p class="text-[8px] text-gray-400 mt-1">Console completo de mixagem com automação sonora e visual.</p>
+          </div>
+          <span class="text-[8px] text-pink-300 font-bold mt-2">Abrir App ↗</span>
+        </a>
+        <a href="http://localhost:8080/apps_historicos/cimaticlabsanuhazi.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-amber-600/20 border border-white/10 hover:border-amber-400 transition-all flex flex-col justify-between">
+          <div>
+            <div class="text-[9px] font-black text-[#d4af37] uppercase">06. Labs Anuhazi</div>
+            <p class="text-[8px] text-gray-400 mt-1">Frequências Solfeggio ancestrais e geometria de luz sagrada.</p>
+          </div>
+          <span class="text-[8px] text-[#d4af37] font-bold mt-2">Abrir App ↗</span>
+        </a>
+        <a href="http://localhost:8080/inicializador.html" target="_blank" class="p-3 rounded-2xl bg-white/5 hover:bg-cyan-600/20 border border-white/10 hover:border-cyan-400 transition-all flex flex-col justify-between col-span-2">
+          <div>
+            <div class="text-[10px] font-black text-cyan-300 uppercase">★ Painel Inicializador Fullscreen</div>
+            <p class="text-[8px] text-gray-400 mt-1">Abre a página dedicada com a esteira completa e links do Google Drive.</p>
+          </div>
+          <span class="text-[8px] text-cyan-300 font-bold mt-1">Acessar Inicializador Fullscreen ↗</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA SUPERIOR FIXA (NAVBAR ELEGANTE COM AS 3 MESAS E ACESSOS RÁPIDOS) -->
+  <header id="top-nav" class="fixed top-4 left-6 right-6 h-14 glass-ui rounded-2xl z-40 flex items-center justify-between px-5">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-[#d4af37] flex items-center justify-center font-black text-xs text-white shadow-lg">
+        CS
+      </div>
+      <div>
+        <h1 class="text-xs font-black uppercase tracking-wider text-white">Cymatics Studio <span class="text-[#d4af37] text-[9px] font-bold">Master 3D</span></h1>
+        <p class="text-[7.5px] text-gray-400 font-semibold tracking-widest uppercase">Espelho Negro • Chladni • Matriz Sagrada</p>
+      </div>
+    </div>
+
+    <!-- SELETOR CENTRAL DAS 3 MESAS -->
+    <div class="flex items-center gap-2">
+      <button class="mesa-pill active" data-mesa="water_pure" id="nav-mesa-1">💧 1. Água Pura</button>
+      <button class="mesa-pill" data-mesa="chladni_sand" id="nav-mesa-2">⏳ 2. Chladni Sand</button>
+      <button class="mesa-pill" data-mesa="fusion_cymatic" id="nav-mesa-3">✨ 3. Fusão Híbrida</button>
+    </div>
+
+    <!-- AÇÕES RÁPIDAS: INICIALIZADOR, LUZES, CÂMERA, SESSÃO, STOP -->
+    <div class="flex items-center gap-2">
+      <button id="nav-btn-launcher" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-[9px] font-black uppercase tracking-wider transition-all">
+        🚀 Inicializador
+      </button>
+      <button id="nav-btn-lights" class="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-[9px] font-black uppercase tracking-wider transition-all">
+        💡 Luminária 3D
+      </button>
+      <button id="nav-btn-view" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all" title="Alternar Vista Topo / 3D">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      </button>
+      <button id="nav-btn-fullscreen" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all" title="Tela Cheia">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+      <button id="nav-btn-stop" class="p-2 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white transition-all" title="Parar Todo o Som (Silêncio Absoluto)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- BOTÃO OCULTAR/EXIBIR PAINÉIS -->
+  <div id="btn-toggle-ui" title="Ocultar / Mostrar Painéis">
+    <svg id="icon-ui" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </div>
+
+  <!-- PAINEL ESQUERDO: HUD DE FREQUÊNCIA, GEOMETRIA E MATRIZ SAGRADA -->
+  <div id="panel-freq" class="fixed top-24 left-6 z-30 transition-all duration-500">
+    <div class="glass-ui p-5 rounded-3xl border border-white/10 min-w-[260px] space-y-3">
+      <div class="flex justify-between items-center">
+        <span class="text-[9px] font-black tracking-widest text-blue-400 uppercase">Frequência Acústica</span>
+        <span id="badge-mesa" class="text-[8px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-[#d4af37] font-black uppercase">1. Água Pura</span>
+      </div>
+      <div class="flex items-baseline gap-2">
+        <span id="hz-display" class="text-5xl font-mono font-bold text-white tracking-tight">0</span>
+        <span class="text-sm text-blue-400 font-bold">Hz</span>
+      </div>
+      
+      <!-- FAIXA DO MODELO ATIVO / MATRIZ DE VIBRAÇÃO -->
+      <div class="pt-3 border-t border-white/10 space-y-1.5 text-[9px]">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 uppercase font-bold">Matriz Ativa:</span>
+          <span id="hud-sacred-badge" class="px-2 py-0.5 rounded-lg bg-blue-500/20 text-[#d4af37] font-black uppercase text-[8px] border border-blue-500/30">
+            ⦿ 1 Ponto Central
+          </span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400 uppercase font-bold">Geometria Nodal:</span>
+          <span id="pattern-name" class="text-cyan-300 font-black uppercase truncate max-w-[140px]">Onda Concêntrica</span>
+        </div>
+        <div class="flex justify-between items-center text-[8px] text-gray-400">
+          <span>Modo Chladni:</span>
+          <span id="mode-mn" class="font-mono text-white font-bold">(m=1, n=2)</span>
+        </div>
+        <div class="flex justify-between items-center text-[8px] text-gray-400">
+          <span>Estado da Água:</span>
+          <span id="water-state-lbl" class="font-bold text-emerald-400">Em Repouso (Silêncio)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR DIREITA MODULAR -->
+  <div id="panel-controls" class="fixed right-6 top-24 bottom-6 w-[360px] glass-ui rounded-3xl z-40 flex flex-col p-5 overflow-hidden">
+    
+    <!-- TOPO DA SIDEBAR -->
+    <div class="flex justify-between items-center pb-3 mb-3 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <div>
+          <h2 class="text-xs font-black uppercase tracking-widest text-white">Controles & Física</h2>
+          <p class="text-[8px] text-[#d4af37] font-bold uppercase">Módulos Interativos</p>
+        </div>
+        <button id="btn-ai-dj" class="bg-blue-500/20 text-blue-400 px-2.5 py-1 rounded-lg text-[8px] font-black border border-blue-500/40 transition-all hover:scale-105" title="Automação Inteligente">
+          AI DJ
+        </button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="btn-session" class="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-[#d4af37] border border-amber-500/30 rounded-lg text-[8px] font-black uppercase">
+          Sessão
+        </button>
+      </div>
+    </div>
+
+    <!-- CORPO DA SIDEBAR COM ACORDEÃO -->
+    <div class="space-y-2 flex-1 overflow-y-auto custom-scroll pr-1">
+
+      <!-- GAVETA 1: FONTES DE ÁUDIO & MICROFONE -->
+      <div>
+        <button class="drawer-btn open" onclick="toggleDrawer('drawer-audio', this)">
+          <span>🎵 1. Fontes de Áudio & Microfone</span>
+          <span class="text-xs">▾</span>
+        </button>
+        <div id="drawer-audio" class="drawer-content open space-y-2.5">
+          <div class="flex justify-between items-center gap-2">
+            <button id="btn-play-pause" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[9px] font-black uppercase">
+              Play / Pause Faixa
+            </button>
+            <label class="cursor-pointer bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-white text-[9px] font-black uppercase flex items-center gap-1" title="Importar músicas locais">
+              <span>+ Música</span>
+              <input type="file" id="audio-input" multiple accept="audio/*" class="hidden">
+            </label>
+          </div>
+          <div id="playlist" class="space-y-1 max-h-20 overflow-y-auto custom-scroll bg-black/40 p-2 rounded-lg border border-white/5"></div>
+          
+          <!-- BOTÕES DE ENTRADA AO VIVO COM TOGGLE REAL ON/OFF -->
+          <div class="grid grid-cols-2 gap-1.5">
+            <button id="btn-mic" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1">
+              <span>🎤</span> <span id="lbl-mic">Microfone: OFF</span>
+            </button>
+            <button id="btn-system" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1">
+              <span>💻</span> <span id="lbl-sys">Sistema: OFF</span>
+            </button>
+          </div>
+          <div class="pt-1 flex justify-between items-center text-[8px]">
+            <span class="text-gray-400 font-bold uppercase">Filtro Subgrave (LowPass):</span>
+            <button id="btn-pro-filter" class="toggle-btn px-2.5 py-0.5">Ativar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GAVETA 2: MATRIZ SAGRADA DE VIBRAÇÃO (NOVO RECURSO EXCLUSIVO) -->
+      <div>
+        <button class="drawer-btn" onclick="toggleDrawer('drawer-sacred', this)">
+          <span>✦ 2. Matriz Sagrada de Vibração</span>
+          <span class="text-xs">▾</span>
+        </button>
+        <div id="drawer-sacred" class="drawer-content space-y-2.5">
+          <div class="text-[8px] text-gray-400">
+            Selecione a geometria dos cruzamentos que se tornam os pontos de vibração acústica na água:
+          </div>
+          
+          <select id="sacred-matrix-select" class="w-full bg-[#0d0d18] border border-white/15 text-white text-[9px] font-bold rounded-xl p-2.5 focus:border-blue-400 outline-none">
+            <option value="ponto_central_1" selected>⦿ 1 Ponto Central (CymaScope Puro - Padrão)</option>
+            <option value="vesica_piscis">⚯ Vesica Piscis (4 Nós: Dualidade & Mandorla)</option>
+            <option value="triquetra">☘ Triquetra Sagrada (6 Nós: Trindade 120°)</option>
+            <option value="cruz_harmonica">✛ Cruz Harmônica (5 Nós: 4 Quadrantes)</option>
+            <option value="pentagrama">★ Pentagrama Sagrado (10 Nós: Proporção Áurea Phi)</option>
+            <option value="semente_vida">✿ Semente da Vida (13 Nós: Gênese Hexagonal)</option>
+            <option value="saraceni_8">✵ Octograma de Saraceni (9 Nós: 8 Tronos Divinos)</option>
+            <option value="metatron_13">❂ Cubo de Metatron (13 Centros / Fruto da Vida)</option>
+            <option value="flor_vida_19">۞ Flor da Vida Completa (19 Centros Harmônicos)</option>
+            <option value="auto_atlas">⚡ AUTO: Ressonância com Atlas Hz</option>
+          </select>
+
+          <div id="sacred-info-box" class="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[8px] text-gray-300">
+            <span class="text-[#d4af37] font-black uppercase block mb-0.5">Modo Padrão:</span>
+            Foco central único no transdutor piezoelétrico. Ondas concêntricas perfeitas sem nenhuma distorção.
+          </div>
+        </div>
+      </div>
+
+      <!-- GAVETA 3: ATLAS DE FREQUÊNCIAS HZ (SOLFEGGIO & PRESETS) -->
+      <div>
+        <button class="drawer-btn" onclick="toggleDrawer('drawer-atlas', this)">
+          <span>📐 3. Atlas de Frequências (Hz)</span>
+          <span class="text-xs">▾</span>
+        </button>
+        <div id="drawer-atlas" class="drawer-content space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-[8px] text-gray-400 uppercase font-bold">Oscilador Interno:</span>
+            <button id="btn-osc-mute" class="text-[8px] px-2.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/40 text-blue-300 font-bold uppercase">
+              Som Tom: ON
+            </button>
+          </div>
+
+          <!-- Slider Manual de Hz -->
+          <div>
+            <div class="flex justify-between text-[8px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Sintonia Fina Manual:</span>
+              <span id="val-freq-manual" class="text-blue-400">0 Hz</span>
+            </div>
+            <input type="range" id="input-freq-manual" min="0" max="1500" step="1" value="0" class="w-full">
+          </div>
+
+          <!-- Grade de Presets Solfeggio & Planetários -->
+          <div class="grid grid-cols-3 gap-1.5 pt-1" id="presets-grid"></div>
+        </div>
+      </div>
+
+      <!-- GAVETA 4: FÍSICA DA MESA & VISCOSIDADE -->
+      <div>
+        <button class="drawer-btn" onclick="toggleDrawer('drawer-physics', this)">
+          <span>⚙ 4. Física da Mesa & Superfície</span>
+          <span class="text-xs">▾</span>
+        </button>
+        <div id="drawer-physics" class="drawer-content space-y-3">
+          <div>
+            <div class="flex justify-between text-[8px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Força / Amplitude (Gain)</span>
+              <span id="val-gain" class="text-blue-400">30</span>
+            </div>
+            <input type="range" id="input-gain" min="5" max="80" value="30" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-[8px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Velocidade de Resposta</span>
+              <span id="val-memory" class="text-blue-400">Rápida (0.15)</span>
+            </div>
+            <input type="range" id="input-memory" min="0.05" max="0.50" step="0.05" value="0.15" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-[8px] font-bold mb-1">
+              <span class="text-gray-400 uppercase">Velocidade Grãos Chladni</span>
+              <span id="val-sand-speed" class="text-blue-400">0.70</span>
+            </div>
+            <input type="range" id="input-sand-speed" min="0.1" max="1.5" step="0.05" value="0.70" class="w-full">
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 pt-1">
+            <button id="btn-mirror-mode" class="toggle-btn active" title="Espelho Negro Puro">Espelho Negro</button>
+            <button id="btn-phys-fluid" class="toggle-btn">Turbulência Fluida</button>
+            <button id="btn-phys-multi" class="toggle-btn">Ondas nas Luzes</button>
+            <button id="btn-pro-bloom" class="toggle-btn">Brilho Emissivo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GAVETA 5: ESTÚDIO DE LUZES (ACESSO RÁPIDO AO MODAL) -->
+      <div>
+        <button class="drawer-btn" onclick="toggleDrawer('drawer-lights-side', this)">
+          <span>💡 5. Estúdio de Luzes & Luminárias</span>
+          <span class="text-xs">▾</span>
+        </button>
+        <div id="drawer-lights-side" class="drawer-content space-y-2.5">
+          <button id="btn-open-lights-modal" class="w-full py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all">
+            Abrir Painel Completo da Luminária 3D ↗
+          </button>
+          <div class="text-[8px] text-gray-400">
+            Regule altura, ângulo de facho concentrado ou aberto, cores e posição das luminárias no modal dedicado.
+          </div>
+        </div>
+      </div>
+
+      <!-- GAVETA 6: FLUXO GENERATIVO & SESSÃO -->
+      <div>
+        <button class="drawer-btn" onclick="toggleDrawer('drawer-extra', this)">
+          <span>🌌 6. Partículas & Sessão</span>
+          <span class="text-xs">▾</span>
+        </button>
+        <div id="drawer-extra" class="drawer-content space-y-2">
+          <button id="btn-generative-flux" class="toggle-btn w-full py-2 border-blue-400/40">
+            Ativar Fluxo Generativo (Partículas Flutuantes)
+          </button>
+          <button id="btn-session-drawer" class="w-full py-2.5 bg-gradient-to-r from-amber-600/20 to-blue-600/20 border border-amber-500/40 rounded-xl text-[9px] text-[#d4af37] font-black uppercase tracking-widest">
+            Iniciar Modo Sessão (Timer Imersivo)
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RODAPÉ DA SIDEBAR: ALTERNAR CÂMERA -->
+    <button id="toggle-view" class="mt-3 w-full py-2.5 bg-white/5 hover:bg-blue-600/20 text-white text-[9px] font-black uppercase rounded-xl border border-white/15 hover:border-blue-400 transition-all">
+      Alternar Câmera (Vista Topo / 3D)
+    </button>
+  </div>
+
+  <!-- OVERLAY MODO SESSÃO (FULLSCREEN IMERSIVO) -->
+  <div id="session-overlay" class="session-overlay">
+    <div id="session-timer" class="text-8xl font-thin tracking-tighter text-white/30">00:00</div>
+    <div class="text-[10px] text-[#d4af37] font-black uppercase tracking-[0.8em] mt-4">Imersão Cimática</div>
+    <button id="btn-exit-session" class="mt-12 px-8 py-3 border border-white/20 hover:border-[#d4af37] rounded-full text-[9px] font-bold uppercase tracking-widest text-white/70 hover:text-white transition-all">
+      Voltar ao Estúdio
+    </button>
+  </div>
+
+  <div id="container"></div>
+
+  <script>
+    // ============================================================================
+    // TABELA FÍSICA DE FREQUÊNCIAS -> MODOS NODAIS DE CHLADNI (m, n)
+    // ============================================================================
+    const CHLADNI_ATLAS = [
+      { hz: 110,  m: 1, n: 2, sign: -1, name: "Cruz Nodal Central (+)", sacred: "ponto_central_1" },
+      { hz: 174,  m: 1, n: 2, sign:  1, name: "Estrela Diagonal (X)", sacred: "ponto_central_1" },
+      { hz: 285,  m: 1, n: 3, sign: -1, name: "Anel e Quatro Pétalas", sacred: "vesica_piscis" },
+      { hz: 340,  m: 2, n: 3, sign: -1, name: "Mandala de 4 Lóbulos", sacred: "triquetra" },
+      { hz: 396,  m: 2, n: 3, sign:  1, name: "Labirinto Hiperbólico", sacred: "triquetra" },
+      { hz: 417,  m: 2, n: 4, sign: -1, name: "Cruz Sagrada 417", sacred: "cruz_harmonica" },
+      { hz: 432,  m: 2, n: 4, sign: -1, name: "Flor Harmônica 432", sacred: "pentagrama" },
+      { hz: 528,  m: 3, n: 4, sign: -1, name: "Geometria Áurea 528", sacred: "pentagrama" },
+      { hz: 639,  m: 3, n: 5, sign: -1, name: "Grade da Criação 639", sacred: "semente_vida" },
+      { hz: 741,  m: 4, n: 5, sign:  1, name: "Estrela Heptagrama 741", sacred: "cruz_harmonica" },
+      { hz: 852,  m: 4, n: 6, sign: -1, name: "Octograma de Saraceni", sacred: "saraceni_8" },
+      { hz: 963,  m: 5, n: 7, sign: -1, name: "Matriz Metatron 963", sacred: "metatron_13" },
+      { hz: 1200, m: 6, n: 8, sign: -1, name: "Flor da Vida 1200", sacred: "flor_vida_19" }
+    ];
+
+    function getChladniModeForHz(hz) {
+      if (hz <= 40) return { m: 1, n: 2, sign: -1, name: "Cruz Nodal Base (+)", sacred: "ponto_central_1" };
+      for (let item of CHLADNI_ATLAS) {
+        if (Math.abs(hz - item.hz) <= 18) return item;
+      }
+      const norm = Math.max(1, Math.min(2000, hz));
+      const m = Math.max(1, Math.floor(Math.sqrt(norm / 45)));
+      const n = Math.max(m + 1, Math.floor(Math.sqrt(norm / 18)));
+      const sign = (Math.floor(norm / 30) % 2 === 0) ? -1 : 1;
+      return { m, n, sign, name: `Mandala Nodal (${m}, ${n})`, sacred: "ponto_central_1" };
+    }
+
+    function evalChladni(nx, nz, m, n, sign) {
+      return 0.5 * (
+        Math.cos(n * Math.PI * nx) * Math.cos(m * Math.PI * nz) +
+        sign * Math.cos(m * Math.PI * nx) * Math.cos(n * Math.PI * nz)
+      );
+    }
+
+    // ============================================================================
+    // MATRIZES DE VIBRAÇÃO SAGRADA (CRUZAMENTOS NODAIS DO ACERVO & BLENDER 5.3)
+    // ============================================================================
+    const phi = 1.6180339887;
+    const SACRED_MATRICES = {
+      'ponto_central_1': {
+        id: 'ponto_central_1',
+        name: '1 Ponto Central (CymaScope Puro)',
+        icon: '⦿',
+        description: 'Transdutor central único (padrão Jenny / Lauterwasser). Ondas concêntricas puras.',
+        points: [{ x: 0.0, z: 0.0, weight: 1.0, phase: 0.0 }]
+      },
+      'vesica_piscis': {
+        id: 'vesica_piscis',
+        name: 'Vesica Piscis (Dualidade & Mandorla)',
+        icon: '⚯',
+        description: '2 focos circulares entrelaçados e os cruzamentos da lente sagrada.',
+        points: [
+          { x: -0.16, z: 0.0, weight: 0.85, phase: 0.0 },
+          { x: 0.16, z: 0.0, weight: 0.85, phase: 0.0 },
+          { x: 0.0, z: 0.277, weight: 0.50, phase: Math.PI / 2 },
+          { x: 0.0, z: -0.277, weight: 0.50, phase: Math.PI / 2 }
+        ]
+      },
+      'triquetra': {
+        id: 'triquetra',
+        name: 'Triquetra (Trindade Sagrada a 120°)',
+        icon: '☘',
+        description: 'Geometria triangular trina com 3 vértices acústicos e cruzamentos internos.',
+        points: [
+          { x: 0.0, z: 0.38, weight: 0.75, phase: 0.0 },
+          { x: -0.329, z: -0.19, weight: 0.75, phase: Math.PI / 3 },
+          { x: 0.329, z: -0.19, weight: 0.75, phase: 2 * Math.PI / 3 },
+          { x: 0.148, z: 0.085, weight: 0.45, phase: 0.0 },
+          { x: -0.148, z: 0.085, weight: 0.45, phase: 0.0 },
+          { x: 0.0, z: -0.171, weight: 0.45, phase: 0.0 }
+        ]
+      },
+      'cruz_harmonica': {
+        id: 'cruz_harmonica',
+        name: 'Cruz Harmônica / Tetraedro (4 Quadrantes)',
+        icon: '✛',
+        description: 'Equilíbrio de 4 quadrantes cardeais com centro de gravidade neutro.',
+        points: [
+          { x: 0.0, z: 0.0, weight: 0.90, phase: 0.0 },
+          { x: 0.40, z: 0.0, weight: 0.65, phase: Math.PI / 4 },
+          { x: -0.40, z: 0.0, weight: 0.65, phase: Math.PI / 4 },
+          { x: 0.0, z: 0.40, weight: 0.65, phase: Math.PI / 4 },
+          { x: 0.0, z: -0.40, weight: 0.65, phase: Math.PI / 4 }
+        ]
+      },
+      'pentagrama': {
+        id: 'pentagrama',
+        name: 'Pentagrama Sagrado (Proporção Áurea Phi)',
+        icon: '★',
+        description: '5 vértices e 5 cruzamentos interiores derivados da Razão Áurea (1.618).',
+        points: (function() {
+          const pts = [];
+          const R = 0.44, r_in = R / (phi * phi);
+          for (let k = 0; k < 5; k++) {
+            const a = (90 + k * 72) * Math.PI / 180;
+            pts.push({ x: +(R * Math.cos(a)).toFixed(4), z: +(R * Math.sin(a)).toFixed(4), weight: 0.70, phase: k * Math.PI / 5 });
+          }
+          for (let k = 0; k < 5; k++) {
+            const a = (126 + k * 72) * Math.PI / 180;
+            pts.push({ x: +(r_in * Math.cos(a)).toFixed(4), z: +(r_in * Math.sin(a)).toFixed(4), weight: 0.45, phase: 0.0 });
+          }
+          return pts;
+        })()
+      },
+      'semente_vida': {
+        id: 'semente_vida',
+        name: 'Semente da Vida (Gênese 7 Centros a 60°)',
+        icon: '✿',
+        description: 'A matriz primária de 7 círculos que desdobra a geometria da criação biológica.',
+        points: (function() {
+          const pts = [{ x: 0.0, z: 0.0, weight: 1.0, phase: 0.0 }];
+          const R = 0.36;
+          for (let k = 0; k < 6; k++) {
+            const a = (k * 60) * Math.PI / 180;
+            pts.push({ x: +(R * Math.cos(a)).toFixed(4), z: +(R * Math.sin(a)).toFixed(4), weight: 0.65, phase: 0.0 });
+          }
+          for (let k = 0; k < 6; k++) {
+            const a = (30 + k * 60) * Math.PI / 180;
+            const r_p = R * Math.sqrt(3) * 0.5;
+            pts.push({ x: +(r_p * Math.cos(a)).toFixed(4), z: +(r_p * Math.sin(a)).toFixed(4), weight: 0.40, phase: Math.PI / 3 });
+          }
+          return pts;
+        })()
+      },
+      'saraceni_8': {
+        id: 'saraceni_8',
+        name: 'Octograma de Saraceni (8 Tronos Divinos)',
+        icon: '✵',
+        description: 'O padrão octogonal sagrado que ancora os 7 Tronos Cósmicos e o Regente.',
+        points: (function() {
+          const pts = [{ x: 0.0, z: 0.0, weight: 1.0, phase: 0.0 }];
+          const R = 0.42;
+          for (let k = 0; k < 8; k++) {
+            const a = (k * 45) * Math.PI / 180;
+            pts.push({ x: +(R * Math.cos(a)).toFixed(4), z: +(R * Math.sin(a)).toFixed(4), weight: 0.60, phase: (k % 2) * Math.PI / 4 });
+          }
+          return pts;
+        })()
+      },
+      'metatron_13': {
+        id: 'metatron_13',
+        name: 'Cubo de Metatron (13 Centros / Fruto da Vida)',
+        icon: '❂',
+        description: '13 centros nodais esféricos de onde nascem todos os 5 Sólidos Platônicos.',
+        points: (function() {
+          const pts = [{ x: 0.0, z: 0.0, weight: 1.0, phase: 0.0 }];
+          const R1 = 0.26, R2 = 0.52;
+          for (let k = 0; k < 6; k++) {
+            const a = (k * 60) * Math.PI / 180;
+            pts.push({ x: +(R1 * Math.cos(a)).toFixed(4), z: +(R1 * Math.sin(a)).toFixed(4), weight: 0.65, phase: 0.0 });
+          }
+          for (let k = 0; k < 6; k++) {
+            const a = (k * 60) * Math.PI / 180;
+            pts.push({ x: +(R2 * Math.cos(a)).toFixed(4), z: +(R2 * Math.sin(a)).toFixed(4), weight: 0.45, phase: Math.PI / 6 });
+          }
+          return pts;
+        })()
+      },
+      'flor_vida_19': {
+        id: 'flor_vida_19',
+        name: 'Flor da Vida Expandida (19 Centros)',
+        icon: '۞',
+        description: 'Rede completa de 19 centros esféricos de ressonância harmônica total.',
+        points: (function() {
+          const pts = [{ x: 0.0, z: 0.0, weight: 1.0, phase: 0.0 }];
+          const R1 = 0.24, R2 = 0.48;
+          for (let k = 0; k < 6; k++) {
+            const a = (k * 60) * Math.PI / 180;
+            pts.push({ x: +(R1 * Math.cos(a)).toFixed(4), z: +(R1 * Math.sin(a)).toFixed(4), weight: 0.60, phase: 0.0 });
+          }
+          for (let k = 0; k < 6; k++) {
+            const a = (k * 60) * Math.PI / 180;
+            pts.push({ x: +(R2 * Math.cos(a)).toFixed(4), z: +(R2 * Math.sin(a)).toFixed(4), weight: 0.40, phase: 0.0 });
+          }
+          for (let k = 0; k < 6; k++) {
+            const a = (30 + k * 60) * Math.PI / 180;
+            const r_p = R1 * Math.sqrt(3);
+            pts.push({ x: +(r_p * Math.cos(a)).toFixed(4), z: +(r_p * Math.sin(a)).toFixed(4), weight: 0.35, phase: 0.0 });
+          }
+          return pts;
+        })()
+      }
+    };
+
+    let activeSacredMatrix = 'ponto_central_1'; // Padrão: 1 Único Ponto Central!
+
+    // ============================================================================
+    // ESTADO GLOBAL & THREE.JS
+    // ============================================================================
+    let scene, camera, renderer, plateGeometry, plateMesh;
+    let originalPositions = [];
+    let time = 0;
+    let isTopView = false;
+    let uiVisible = true;
+    let lightHelpersVisible = false;
+
+    // As 3 Mesas: 'water_pure' | 'chladni_sand' | 'fusion_cymatic'
+    let activeMesa = 'water_pure';
+
+    // Matriz de Ondas para Fusão / Solver 2D Hidrodinâmico
+    const res = 160;
+    const total = (res + 1) * (res + 1);
+    const hField = new Float32Array(total);
+    const vField = new Float32Array(total);
+
+    // Sistema de 28.000 Microgrãos de Areia Reais (Mesa 2: Chladni Sand)
+    let sandPoints = null;
+    const SAND_COUNT = 28000;
+    const sandXY = new Float32Array(SAND_COUNT * 2);
+
+    // Sistema de Partículas Aéreas (Fluxo Generativo)
+    let particleSystem;
+    const PARTICLE_COUNT = 3500;
+
+    // Áudio e Oscilador Interno
+    let audioCtx, analyser, gainNode, sourceNode, lowPass;
+    let dataArray;
+    let currentStream = null;
+    let activeStreamType = null; // 'mic' | 'system' | null
+    let currentAudioElement = null;
+    let smoothedVolume = 0;
+    let currentHz = 0;
+    let manualHz = 0;
+    let geoHz = 0;
+    let targetPresetHz = 0;
+    let isPresetActive = false;
+    let internalOscillator = null;
+    let internalGain = null;
+    let isOscillatorMuted = false;
+    let playlist = [];
+    let activeTrackIndex = -1;
+
+    // Luzes Customizadas com Posição X/Z, Altura Y e Ângulo (Tilt)
+    let lights = [];
+    let rayLights = [];
+    let lightCounter = 0;
+    let selectedLightEntry = null;
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isDragging = false;
+    const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -2.0);
+
+    // Modo Sessão
+    let isSessionActive = false;
+    let sessionStartTime = 0;
+    let sessionTimerInterval = null;
+
+    const PARAMS = {
+      gain: 30,
+      responseMemory: 0.15,
+      sandSpeed: 0.70,
+      mirrorMode: true,
+      size: 16,
+      res: 160,
+      rayCount: 0,
+      rayDistPercent: 55,
+      rayIntensity: 45,
+      rayPulse: false,
+      rayRotate: false,
+      rayCycle: false,
+      rayRotationOffset: 0,
+      ray8: false,
+      rayVortex: false,
+      rayJump: false,
+      rayRainbow: false,
+      rayHzColor: false,
+      rayKaleido: false,
+      rayStraight: false,
+      rayHypno: false,
+      rayInvert: false,
+      lastJumpTime: 0,
+      jumpInvert: false,
+      physResonance: false,
+      physFluid: false,
+      physMulti: false,
+      proBloom: false,
+      proFilter: false,
+      aiDjActive: false,
+      aiLastAction: 0,
+      genFlux: false
+    };
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x020204);
+
+      camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
+      updateCamera();
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      document.getElementById('container').appendChild(renderer.domElement);
+
+      // Placa / Superfície da Água 16x16 com 160x160 divisões (ZERO BACIA, ZERO BORDA)
+      plateGeometry = new THREE.PlaneGeometry(PARAMS.size, PARAMS.size, PARAMS.res, PARAMS.res);
+      plateGeometry.rotateX(-Math.PI / 2);
+
+      const pos = plateGeometry.attributes.position.array;
+      for (let i = 0; i < pos.length; i++) originalPositions.push(pos[i]);
+
+      // Material "Visual Perfeito": Espelho Negro Profundo
+      const plateMaterial = new THREE.MeshStandardMaterial({
+        color: 0x060609,
+        metalness: 0.96,
+        roughness: 0.14,
+        emissive: 0x000000,
+        emissiveIntensity: 0
+      });
+      plateMesh = new THREE.Mesh(plateGeometry, plateMaterial);
+      scene.add(plateMesh);
+
+      initSandParticles();
+      initFluxParticles();
+
+      // Luz ambiente mínima
+      scene.add(new THREE.AmbientLight(0xffffff, 0.08));
+
+      // 3 Luminárias Iniciais com Controle de Altura, Ângulo e Posição
+      addLight("#3b82f6", [5.5, 3.2, 5.5], 85, 45);
+      addLight("#ef4444", [-5.5, 3.2, -5.5], 85, 45);
+      addLight("#d4af37", [0, 6.0, 0], 35, 65);
+
+      setupUI();
+      setupInteractions();
+      renderPlaylist();
+      animate();
+    }
+
+    // ============================================================================
+    // MESA 2: MICROGRÃOS DE AREIA DE CHLADNI (28.000 PARTÍCULAS FÍSICAS)
+    // ============================================================================
+    function initSandParticles() {
+      const geo = new THREE.BufferGeometry();
+      const positions = new Float32Array(SAND_COUNT * 3);
+      const colors = new Float32Array(SAND_COUNT * 3);
+
+      for (let i = 0; i < SAND_COUNT; i++) {
+        const nx = (Math.random() * 2 - 1) * 0.96;
+        const nz = (Math.random() * 2 - 1) * 0.96;
+        sandXY[i * 2] = nx;
+        sandXY[i * 2 + 1] = nz;
+
+        positions[i * 3] = nx * (PARAMS.size / 2);
+        positions[i * 3 + 1] = 0.06;
+        positions[i * 3 + 2] = nz * (PARAMS.size / 2);
+
+        const shade = 0.82 + Math.random() * 0.18;
+        colors[i * 3] = 0.96 * shade;
+        colors[i * 3 + 1] = 0.84 * shade;
+        colors[i * 3 + 2] = 0.58 * shade;
+      }
+
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const mat = new THREE.PointsMaterial({
+        size: 0.085,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.92
+      });
+
+      sandPoints = new THREE.Points(geo, mat);
+      sandPoints.visible = false;
+      scene.add(sandPoints);
+    }
+
+    function updateSandPhysics(effectiveHz, activeEnergy) {
+      if (!sandPoints || !sandPoints.visible) return;
+
+      const mode = getChladniModeForHz(effectiveHz);
+      const m = mode.m, n = mode.n, sign = mode.sign;
+      const pos = sandPoints.geometry.attributes.position.array;
+      const halfSize = PARAMS.size / 2;
+      const drive = Math.min(1.5, Math.max(0.08, activeEnergy * 0.6)) * PARAMS.sandSpeed;
+      const eps = 0.008;
+
+      for (let i = 0; i < SAND_COUNT; i++) {
+        let nx = sandXY[i * 2];
+        let nz = sandXY[i * 2 + 1];
+
+        const val = evalChladni(nx, nz, m, n, sign);
+        const absVal = Math.abs(val);
+
+        if (absVal > 0.012) {
+          const gx = (Math.abs(evalChladni(nx + eps, nz, m, n, sign)) - absVal) / eps;
+          const gz = (Math.abs(evalChladni(nx, nz + eps, m, n, sign)) - absVal) / eps;
+
+          const step = 0.018 * drive;
+          const jitter = absVal * 0.045 * drive;
+
+          nx -= gx * step + (Math.random() - 0.5) * jitter;
+          nz -= gz * step + (Math.random() - 0.5) * jitter;
+        } else {
+          nx += (Math.random() - 0.5) * 0.0015 * drive;
+          nz += (Math.random() - 0.5) * 0.0015 * drive;
+        }
+
+        if (nx > 0.97) nx = 0.97 - Math.random() * 0.05;
+        if (nx < -0.97) nx = -0.97 + Math.random() * 0.05;
+        if (nz > 0.97) nz = 0.97 - Math.random() * 0.05;
+        if (nz < -0.97) nz = -0.97 + Math.random() * 0.05;
+
+        sandXY[i * 2] = nx;
+        sandXY[i * 2 + 1] = nz;
+
+        pos[i * 3] = nx * halfSize;
+        pos[i * 3 + 1] = 0.05 + absVal * 0.18 * activeEnergy;
+        pos[i * 3 + 2] = nz * halfSize;
+      }
+
+      sandPoints.geometry.attributes.position.needsUpdate = true;
+    }
+
+    function initFluxParticles() {
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(PARTICLE_COUNT * 3);
+      const colors = new Float32Array(PARTICLE_COUNT * 3);
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 35;
+        positions[i * 3 + 1] = Math.random() * 10;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 35;
+        colors[i * 3] = 1; colors[i * 3 + 1] = 1; colors[i * 3 + 2] = 1;
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.055,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending
+      });
+
+      particleSystem = new THREE.Points(geometry, material);
+      scene.add(particleSystem);
+    }
+
+    function updateCamera() {
+      if (isTopView) {
+        camera.position.set(0, 24, 0.001);
+        camera.lookAt(0, 0, 0);
+      } else {
+        camera.position.set(0, 16, 19);
+        camera.lookAt(0, 0, 0);
+      }
+    }
+
+    // ============================================================================
+    // ESTÚDIO DE LUZES 3D (LUMINÁRIAS ARRASTÁVEIS, ALTURA Y E ÂNGULO DO FACHO)
+    // ============================================================================
+    function addLight(hex, pos, intensity, angleDeg = 50) {
+      lightCounter++;
+      const id = lightCounter;
+
+      const spotLight = new THREE.SpotLight(hex, intensity / 15, 45, (angleDeg * Math.PI) / 180, 0.65, 1.2);
+      spotLight.position.set(pos[0], pos[1], pos[2]);
+      spotLight.target.position.set(0, 0, 0);
+      scene.add(spotLight);
+      scene.add(spotLight.target);
+
+      const helperGeo = new THREE.SphereGeometry(0.18, 12, 12);
+      const helperMat = new THREE.MeshBasicMaterial({ color: hex });
+      const helperMesh = new THREE.Mesh(helperGeo, helperMat);
+      helperMesh.visible = lightHelpersVisible;
+      spotLight.add(helperMesh);
+
+      // Card no Modal da Luminária
+      const card = document.createElement('div');
+      card.id = `card-${id}`;
+      card.className = "light-card p-3 rounded-2xl space-y-2.5 cursor-pointer";
+      card.innerHTML = `
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-2">
+            <input type="color" id="cp-${id}" value="${hex}">
+            <span class="text-[9px] font-black text-white uppercase">Luminária ${id} (Arrastável 3D)</span>
+          </div>
+          <button onclick="event.stopPropagation(); removeLight(${id})" class="text-white/30 hover:text-red-500">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-[8px] font-bold text-gray-400">
+          <div>
+            <div class="flex justify-between mb-0.5"><span>Força</span><span id="lbl-int-${id}" class="text-blue-400">${intensity}</span></div>
+            <input type="range" id="range-int-${id}" min="0" max="200" value="${intensity}" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between mb-0.5"><span>Altura Y</span><span id="lbl-h-${id}" class="text-blue-400">${pos[1]}m</span></div>
+            <input type="range" id="range-h-${id}" min="0.5" max="14" step="0.5" value="${pos[1]}" class="w-full" title="Aproxima ou afasta a luminária da mesa">
+          </div>
+          <div>
+            <div class="flex justify-between mb-0.5"><span>Facho</span><span id="lbl-ang-${id}" class="text-[#d4af37]">${angleDeg}°</span></div>
+            <input type="range" id="range-ang-${id}" min="15" max="88" step="1" value="${angleDeg}" class="w-full" title="Facho: Raio Concentrado (15°) até Brilhante Aberto (88°)">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[8px] font-bold text-gray-400 pt-1">
+          <div>
+            <div class="flex justify-between mb-0.5"><span>Órbita Ângulo</span><span id="lbl-orb-${id}" class="text-cyan-300">0°</span></div>
+            <input type="range" id="range-orb-${id}" min="0" max="360" step="5" value="45" class="w-full" title="Gira a luminária em todos os ângulos ao redor da mesa">
+          </div>
+          <div>
+            <div class="flex justify-between mb-0.5"><span>Distância Centro</span><span id="lbl-rad-${id}" class="text-cyan-300">7.8m</span></div>
+            <input type="range" id="range-rad-${id}" min="1" max="14" step="0.5" value="7.8" class="w-full" title="Aproxima ou afasta a luz do centro da mesa">
+          </div>
+        </div>
+      `;
+
+      const container = document.getElementById('lights-list-modal');
+      if (container) container.appendChild(card);
+
+      const entry = { id, light: spotLight, helper: helperMesh, card, rawIntensity: intensity };
+      lights.push(entry);
+
+      document.getElementById(`cp-${id}`).oninput = (e) => {
+        spotLight.color.set(e.target.value);
+        helperMesh.material.color.set(e.target.value);
+      };
+      document.getElementById(`range-int-${id}`).oninput = (e) => {
+        const val = parseFloat(e.target.value);
+        entry.rawIntensity = val;
+        spotLight.intensity = val / 15;
+        document.getElementById(`lbl-int-${id}`).innerText = Math.round(val);
+      };
+      document.getElementById(`range-h-${id}`).oninput = (e) => {
+        const h = parseFloat(e.target.value);
+        spotLight.position.y = h;
+        document.getElementById(`lbl-h-${id}`).innerText = h + 'm';
+      };
+      document.getElementById(`range-ang-${id}`).oninput = (e) => {
+        const deg = parseFloat(e.target.value);
+        spotLight.angle = (deg * Math.PI) / 180;
+        document.getElementById(`lbl-ang-${id}`).innerText = deg + '°';
+      };
+      
+      let curDist = Math.sqrt(pos[0]*pos[0] + pos[2]*pos[2]) || 7.5;
+      let curAngDeg = Math.round(Math.atan2(pos[2], pos[0]) * 180 / Math.PI);
+      if (curAngDeg < 0) curAngDeg += 360;
+      
+      const orbEl = document.getElementById(`range-orb-${id}`);
+      const radEl = document.getElementById(`range-rad-${id}`);
+      if (orbEl && radEl) {
+        orbEl.value = curAngDeg;
+        radEl.value = curDist.toFixed(1);
+        document.getElementById(`lbl-orb-${id}`).innerText = curAngDeg + '°';
+        document.getElementById(`lbl-rad-${id}`).innerText = curDist.toFixed(1) + 'm';
+
+        function updateLightPos() {
+          const deg = parseFloat(orbEl.value);
+          const r = parseFloat(radEl.value);
+          const rad = (deg * Math.PI) / 180;
+          spotLight.position.x = Math.cos(rad) * r;
+          spotLight.position.z = Math.sin(rad) * r;
+          document.getElementById(`lbl-orb-${id}`).innerText = Math.round(deg) + '°';
+          document.getElementById(`lbl-rad-${id}`).innerText = r.toFixed(1) + 'm';
+        }
+        orbEl.oninput = updateLightPos;
+        radEl.oninput = updateLightPos;
+      }
+      card.onclick = () => selectLight(entry);
+
+      selectLight(entry);
+    }
+
+    function selectLight(entry) {
+      lights.forEach(l => l.card.classList.remove('active'));
+      selectedLightEntry = entry;
+      entry.card.classList.add('active');
+      dragPlane.constant = -entry.light.position.y;
+    }
+
+    window.removeLight = function(id) {
+      const idx = lights.findIndex(l => l.id === id);
+      if (idx !== -1) {
+        scene.remove(lights[idx].light.target);
+        scene.remove(lights[idx].light);
+        lights[idx].card.remove();
+        if (selectedLightEntry === lights[idx]) selectedLightEntry = null;
+        lights.splice(idx, 1);
+      }
+    };
+
+    // ============================================================================
+    // RAIOS GEOMÉTRICOS & CALEIDOSCÓPIO
+    // ============================================================================
+    function updateRayLights() {
+      rayLights.forEach(rl => scene.remove(rl.light));
+      rayLights = [];
+      const colorContainer = document.getElementById('modal-ray-colors');
+      if (colorContainer) colorContainer.innerHTML = '';
+      const count = PARAMS.rayCount;
+      if (count <= 0) return;
+
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const hex = "#3b82f6";
+        const light = new THREE.PointLight(hex, PARAMS.rayIntensity / 25, 12, 1.8);
+        scene.add(light);
+        if (colorContainer) {
+          const cp = document.createElement('input');
+          cp.type = 'color';
+          cp.value = hex;
+          cp.oninput = (e) => light.color.set(e.target.value);
+          colorContainer.appendChild(cp);
+        }
+        rayLights.push({ light, angle, offset: Math.random() * Math.PI });
+      }
+    }
+
+    function updateRayPositions() {
+      const maxDist = PARAMS.size / 2;
+      let baseDist = (PARAMS.rayDistPercent / 100) * maxDist;
+      let currentDisplayHz = Math.max(currentHz, manualHz);
+      let rhythmSpeed = 4.0 + (smoothedVolume * 10.0);
+
+      if (PARAMS.rayJump && smoothedVolume > 1.3 && time - PARAMS.lastJumpTime > 0.08) {
+        PARAMS.rayRotationOffset += (Math.random() - 0.5) * 2.0;
+        PARAMS.jumpInvert = !PARAMS.jumpInvert;
+        PARAMS.lastJumpTime = time;
+      }
+      if (PARAMS.rayRotate) PARAMS.rayRotationOffset += 0.015;
+
+      const scaledInt = PARAMS.rayIntensity / 25;
+
+      rayLights.forEach((rl, i) => {
+        let d = baseDist;
+        let finalAngle = rl.angle + PARAMS.rayRotationOffset;
+        let yPos = 1.3 + (smoothedVolume * 0.12);
+        let prog = (time * rhythmSpeed) % 1.5;
+        if (PARAMS.jumpInvert) prog = 1.5 - prog;
+        let activeProg = PARAMS.rayInvert ? (1.5 - prog) : prog;
+
+        if (PARAMS.rayStraight) {
+          d = activeProg * baseDist;
+          rl.light.intensity = scaledInt * Math.sin((prog / 1.5) * Math.PI);
+        }
+        if (PARAMS.rayHypno) {
+          d = activeProg * baseDist;
+          finalAngle += activeProg * 6.0;
+          rl.light.intensity = scaledInt * Math.sin((prog / 1.5) * Math.PI);
+        }
+        if (PARAMS.rayKaleido) {
+          const slice = (Math.PI * 2) / 6;
+          d = activeProg * baseDist;
+          finalAngle += activeProg * 2.0;
+          finalAngle = Math.floor(finalAngle / slice) * slice + (Math.abs((finalAngle % slice) - slice / 2));
+          rl.light.intensity = scaledInt * Math.sin((prog / 1.5) * Math.PI);
+        }
+        if (PARAMS.rayPulse) {
+          let wave = Math.sin((time * 4) + (i * 0.1));
+          d = (Math.abs(wave) * d) + (smoothedVolume * 0.35);
+        }
+        if (PARAMS.ray8) {
+          finalAngle += Math.sin(time * 2 + rl.offset) * 0.6;
+          d *= (1 + Math.cos((time * 2 + rl.offset) * 2) * 0.3);
+        }
+        if (PARAMS.rayVortex) {
+          finalAngle += (i * 0.3) + (time * 2);
+          d *= (0.5 + (i / rayLights.length) * 0.8);
+          yPos += Math.sin(time * 3 + i) * 0.7;
+        }
+
+        rl.light.position.x = Math.cos(finalAngle) * d;
+        rl.light.position.z = Math.sin(finalAngle) * d;
+        rl.light.position.y = yPos;
+
+        if (PARAMS.rayCycle || PARAMS.rayRainbow || PARAMS.rayHzColor) {
+          let h = 0;
+          if (PARAMS.rayCycle) h = (time * 0.2) % 1;
+          if (PARAMS.rayRainbow) h = (i / rayLights.length + time * 0.3) % 1;
+          if (PARAMS.rayHzColor) h = (currentDisplayHz / 2000) % 1;
+          rl.light.color.setHSL(h, 0.9, 0.55);
+        } else if (!PARAMS.rayStraight && !PARAMS.rayHypno && !PARAMS.rayKaleido) {
+          rl.light.intensity = scaledInt;
+        }
+      });
+    }
+
+    function setupInteractions() {
+      window.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.glass-ui') || e.target.closest('#color-modal') || e.target.closest('#modal-launcher') || e.target.closest('#btn-toggle-ui') || !selectedLightEntry) return;
+        isDragging = true;
+        dragPlane.constant = -selectedLightEntry.light.position.y;
+        updateDrag(e);
+      });
+      window.addEventListener('mousemove', (e) => { if (isDragging) updateDrag(e); });
+      window.addEventListener('mouseup', () => isDragging = false);
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    function updateDrag(e) {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const pt = new THREE.Vector3();
+      if (raycaster.ray.intersectPlane(dragPlane, pt)) {
+        selectedLightEntry.light.position.x = Math.max(-10, Math.min(10, pt.x));
+        selectedLightEntry.light.position.z = Math.max(-10, Math.min(10, pt.z));
+      }
+    }
+
+    // ============================================================================
+    // MOTOR DE ÁUDIO COM CONTROLE COMPLETO ON/OFF
+    // ============================================================================
+    async function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.85;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 1.0;
+
+        lowPass = audioCtx.createBiquadFilter();
+        lowPass.type = 'lowpass';
+        lowPass.frequency.value = 450;
+      }
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+    }
+
+    async function ensureInternalOscillator() {
+      await initAudio();
+      if (!internalOscillator) {
+        internalOscillator = audioCtx.createOscillator();
+        internalGain = audioCtx.createGain();
+        internalOscillator.type = 'sine';
+        internalOscillator.frequency.setValueAtTime(174, audioCtx.currentTime);
+        internalGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        internalOscillator.connect(internalGain);
+        internalGain.connect(analyser);
+        internalGain.connect(audioCtx.destination);
+        internalOscillator.start();
+      }
+    }
+
+    function fadeInternalSound(targetVolume, duration = 0.4) {
+      if (!internalGain || !audioCtx) return;
+      const effectiveVol = isOscillatorMuted ? 0 : targetVolume;
+      internalGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      internalGain.gain.linearRampToValueAtTime(effectiveVol, audioCtx.currentTime + duration);
+    }
+
+    // LIGA / DESLIGA STREAM (MICROFONE OU SISTEMA)
+    async function startStream(type) {
+      await initAudio();
+      isPresetActive = false;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      fadeInternalSound(0, 0.3);
+      stopEverything(false);
+
+      try {
+        const stream = type === 'mic'
+          ? await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } })
+          : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+
+        sourceNode = audioCtx.createMediaStreamSource(stream);
+        if (PARAMS.proFilter) {
+          sourceNode.connect(lowPass);
+          lowPass.connect(analyser);
+        } else {
+          sourceNode.connect(analyser);
+        }
+
+        currentStream = stream;
+        activeStreamType = type;
+
+        if (type === 'mic') {
+          document.getElementById('btn-mic').classList.add('bg-blue-600', 'text-white');
+          document.getElementById('lbl-mic').innerText = "Microfone: ON";
+        } else {
+          document.getElementById('btn-system').classList.add('bg-blue-600', 'text-white');
+          document.getElementById('lbl-sys').innerText = "Sistema: ON";
+        }
+      } catch (err) {
+        console.error("Erro ao ativar stream de áudio:", err);
+        stopEverything(true);
+      }
+    }
+
+    window.playTrack = function(idx) {
+      if (activeTrackIndex === idx && currentAudioElement) {
+        if (currentAudioElement.paused) {
+          currentAudioElement.play();
+          fadeInternalSound(0, 0.3);
+        } else {
+          currentAudioElement.pause();
+        }
+        renderPlaylist();
+        return;
+      }
+
+      initAudio().then(() => {
+        stopEverything(false);
+        const track = playlist[idx];
+        activeTrackIndex = idx;
+        const audio = new Audio(track.url);
+        currentAudioElement = audio;
+        sourceNode = audioCtx.createMediaElementSource(audio);
+        if (PARAMS.proFilter) {
+          sourceNode.connect(lowPass);
+          lowPass.connect(analyser);
+        } else {
+          sourceNode.connect(analyser);
+        }
+        analyser.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        audio.onended = () => {
+          if (activeTrackIndex + 1 < playlist.length) window.playTrack(activeTrackIndex + 1);
+        };
+        audio.play();
+        fadeInternalSound(0, 0.3);
+        renderPlaylist();
+      });
+    };
+
+    function renderPlaylist() {
+      const pl = document.getElementById('playlist');
+      if (!pl) return;
+      pl.innerHTML = '';
+      if (playlist.length === 0) {
+        pl.innerHTML = '<div class="text-[8px] text-gray-400 text-center py-2">Nenhuma música carregada</div>';
+        return;
+      }
+      playlist.forEach((track, i) => {
+        const item = document.createElement('div');
+        const isPlaying = activeTrackIndex === i && currentAudioElement && !currentAudioElement.paused;
+        item.className = `flex justify-between items-center p-1.5 rounded text-[8px] cursor-pointer ${activeTrackIndex === i ? 'bg-blue-600/30 text-blue-300 font-bold' : 'text-gray-300 hover:bg-white/5'}`;
+        item.innerHTML = `
+          <span class="truncate max-w-[200px]">${isPlaying ? '▶ ' : ''}${track.name}</span>
+          <span class="text-[7px] text-gray-400">#${i + 1}</span>
+        `;
+        item.onclick = () => window.playTrack(i);
+        pl.appendChild(item);
+      });
+    }
+
+    // SILÊNCIO COMPLETO: DESLIGA TUDO E PARA A ÁGUA INSTANTANEAMENTE
+    function stopEverything(resetUI = true) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+      }
+      activeStreamType = null;
+
+      if (currentAudioElement) {
+        currentAudioElement.pause();
+        currentAudioElement = null;
+      }
+      if (sourceNode) {
+        try { sourceNode.disconnect(); } catch (e) {}
+        sourceNode = null;
+      }
+
+      smoothedVolume = 0;
+      currentHz = 0;
+      hField.fill(0);
+      vField.fill(0);
+
+      if (resetUI) {
+        activeTrackIndex = -1;
+        isPresetActive = false;
+        manualHz = 0;
+        document.getElementById('input-freq-manual').value = 0;
+        document.getElementById('val-freq-manual').innerText = '0 Hz';
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        fadeInternalSound(0, 0.2);
+        renderPlaylist();
+        
+        document.getElementById('btn-mic').classList.remove('bg-blue-600', 'text-white');
+        document.getElementById('lbl-mic').innerText = "Microfone: OFF";
+        
+        document.getElementById('btn-system').classList.remove('bg-blue-600', 'text-white');
+        document.getElementById('lbl-sys').innerText = "Sistema: OFF";
+      }
+    }
+
+    // ============================================================================
+    // CONFIGURAÇÃO DA INTERFACE DO USUÁRIO (UI)
+    // ============================================================================
+    window.toggleDrawer = function(drawerId, btnEl) {
+      const content = document.getElementById(drawerId);
+      const isOpen = content.classList.contains('open');
+      document.querySelectorAll('.drawer-content').forEach(el => el.classList.remove('open'));
+      document.querySelectorAll('.drawer-btn').forEach(el => el.classList.remove('open'));
+      if (!isOpen) {
+        content.classList.add('open');
+        btnEl.classList.add('open');
+      }
+    };
+
+    function setupUI() {
+      // 1. SELEÇÃO DAS 3 MESAS
+      function selectMesa(mesaKey) {
+        activeMesa = mesaKey;
+        document.querySelectorAll('.mesa-pill').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-mesa') === mesaKey);
+        });
+
+        // Visibilidade dos grãos de areia
+        if (sandPoints) sandPoints.visible = (activeMesa === 'chladni_sand');
+
+        // Atualiza Badges
+        const labels = {
+          'water_pure': '1. Água Pura',
+          'chladni_sand': '2. Chladni Sand',
+          'fusion_cymatic': '3. Fusão Híbrida'
+        };
+        document.getElementById('badge-mesa').innerText = labels[mesaKey] || mesaKey;
+      }
+
+      document.getElementById('nav-mesa-1').onclick = () => selectMesa('water_pure');
+      document.getElementById('nav-mesa-2').onclick = () => selectMesa('chladni_sand');
+      document.getElementById('nav-mesa-3').onclick = () => selectMesa('fusion_cymatic');
+
+      // 2. SELETOR DE MATRIZ SAGRADA DE VIBRAÇÃO
+      const sacredSelect = document.getElementById('sacred-matrix-select');
+      sacredSelect.onchange = (e) => {
+        activeSacredMatrix = e.target.value;
+        updateSacredHUD();
+      };
+
+      function updateSacredHUD() {
+        const hudBadge = document.getElementById('hud-sacred-badge');
+        const infoBox = document.getElementById('sacred-info-box');
+        
+        if (activeSacredMatrix === 'auto_atlas') {
+          hudBadge.innerText = "⚡ AUTO: Ressonância Atlas";
+          infoBox.innerHTML = '<span class="text-[#d4af37] font-black uppercase block mb-0.5">Ressonância Automática:</span>A geometria sagrada vibra em sincronia direta com a frequência acústica ativa no Atlas Hz.';
+        } else {
+          const mat = SACRED_MATRICES[activeSacredMatrix];
+          if (mat) {
+            hudBadge.innerText = `${mat.icon} ${mat.name}`;
+            infoBox.innerHTML = `<span class="text-[#d4af37] font-black uppercase block mb-0.5">${mat.name}:</span>${mat.description} (${mat.points.length} pontos nodais de excitação).`;
+          }
+        }
+      }
+
+      // 3. GRADE DE PRESETS SOLFEGGIO
+      const pGrid = document.getElementById('presets-grid');
+      CHLADNI_ATLAS.forEach(item => {
+        const b = document.createElement('button');
+        b.className = 'preset-btn';
+        b.innerHTML = `<div class="text-white font-black">${item.hz} Hz</div><div class="text-[7px] text-[#d4af37] truncate px-1">${item.name}</div>`;
+        b.onclick = () => {
+          document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+          if (isPresetActive && targetPresetHz === item.hz) {
+            isPresetActive = false;
+            targetPresetHz = 0;
+            fadeInternalSound(0, 0.4);
+          } else {
+            b.classList.add('active');
+            targetPresetHz = item.hz;
+            isPresetActive = true;
+            ensureInternalOscillator().then(() => fadeInternalSound(0.12, 0.6));
+            
+            // Se modo auto estiver ativo, sincroniza geometria sagrada
+            if (activeSacredMatrix === 'auto_atlas') {
+              updateSacredHUD();
+            }
+          }
+        };
+        pGrid.appendChild(b);
+      });
+
+      // 4. CONTROLES DE FREQUÊNCIA MANUAL & FÍSICA
+      document.getElementById('input-freq-manual').oninput = (e) => {
+        manualHz = parseFloat(e.target.value);
+        document.getElementById('val-freq-manual').innerText = manualHz + ' Hz';
+        if (manualHz > 0) {
+          isPresetActive = false;
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          ensureInternalOscillator().then(() => fadeInternalSound(0.10, 0.4));
+        } else {
+          fadeInternalSound(0, 0.4);
+        }
+      };
+
+      document.getElementById('input-gain').oninput = (e) => {
+        PARAMS.gain = parseFloat(e.target.value);
+        document.getElementById('val-gain').innerText = Math.round(PARAMS.gain);
+      };
+      document.getElementById('input-memory').oninput = (e) => {
+        PARAMS.responseMemory = parseFloat(e.target.value);
+        document.getElementById('val-memory').innerText = PARAMS.responseMemory <= 0.15 ? "Rápida (" + PARAMS.responseMemory + ")" : "Lenta (" + PARAMS.responseMemory + ")";
+      };
+      document.getElementById('input-sand-speed').oninput = (e) => {
+        PARAMS.sandSpeed = parseFloat(e.target.value);
+        document.getElementById('val-sand-speed').innerText = PARAMS.sandSpeed.toFixed(2);
+      };
+
+      // Toggles de Acabamento & Efeitos
+      document.getElementById('btn-mirror-mode').onclick = (e) => {
+        PARAMS.mirrorMode = !PARAMS.mirrorMode;
+        e.target.classList.toggle('active', PARAMS.mirrorMode);
+      };
+      document.getElementById('btn-phys-fluid').onclick = (e) => {
+        PARAMS.physFluid = !PARAMS.physFluid;
+        e.target.classList.toggle('active', PARAMS.physFluid);
+      };
+      document.getElementById('btn-phys-multi').onclick = (e) => {
+        PARAMS.physMulti = !PARAMS.physMulti;
+        e.target.classList.toggle('active', PARAMS.physMulti);
+      };
+      document.getElementById('btn-pro-bloom').onclick = (e) => {
+        PARAMS.proBloom = !PARAMS.proBloom;
+        e.target.classList.toggle('active', PARAMS.proBloom);
+      };
+      document.getElementById('btn-generative-flux').onclick = (e) => {
+        PARAMS.genFlux = !PARAMS.genFlux;
+        e.target.classList.toggle('active', PARAMS.genFlux);
+        particleSystem.material.opacity = PARAMS.genFlux ? 0.85 : 0;
+      };
+
+      // 5. MODAL DA LUMINÁRIA & ESTÚDIO DE LUZES 3D
+      const modalLights = document.getElementById('modal-lights-studio');
+      document.getElementById('nav-btn-lights').onclick = () => modalLights.classList.remove('hidden');
+      document.getElementById('btn-open-lights-modal').onclick = () => modalLights.classList.remove('hidden');
+      document.getElementById('close-lights-modal').onclick = () => modalLights.classList.add('hidden');
+
+      document.getElementById('toggle-light-helpers').onclick = (e) => {
+        lightHelpersVisible = !lightHelpersVisible;
+        lights.forEach(l => l.helper.visible = lightHelpersVisible);
+        e.target.innerText = lightHelpersVisible ? "Visível: ON" : "Visível: OFF";
+      };
+
+      // Adicionar Nova Luz
+      document.getElementById('add-light-modal-btn').onclick = () => {
+        document.getElementById('color-modal').classList.remove('hidden');
+      };
+      document.getElementById('cancel-color').onclick = () => {
+        document.getElementById('color-modal').classList.add('hidden');
+      };
+      document.getElementById('confirm-color').onclick = () => {
+        const hex = document.getElementById('new-light-color').value;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 4.5 + Math.random() * 3;
+        addLight(hex, [Math.cos(angle) * dist, 4.0, Math.sin(angle) * dist], 80, 50);
+        document.getElementById('color-modal').classList.add('hidden');
+      };
+
+      // Controles de Raios no Modal
+      document.getElementById('modal-input-rays').oninput = (e) => {
+        PARAMS.rayCount = parseInt(e.target.value);
+        document.getElementById('modal-val-rays').innerText = PARAMS.rayCount;
+        updateRayLights();
+      };
+      document.getElementById('modal-input-ray-dist').oninput = (e) => {
+        PARAMS.rayDistPercent = parseFloat(e.target.value);
+        document.getElementById('modal-val-ray-dist').innerText = Math.round(PARAMS.rayDistPercent) + '%';
+      };
+      document.getElementById('modal-input-ray-int').oninput = (e) => {
+        PARAMS.rayIntensity = parseFloat(e.target.value);
+        document.getElementById('modal-val-ray-int').innerText = Math.round(PARAMS.rayIntensity);
+      };
+      
+      const rayToggles = [
+        ['modal-btn-ray-pulse', 'rayPulse'],
+        ['modal-btn-ray-rotate', 'rayRotate'],
+        ['modal-btn-ray-cycle', 'rayCycle'],
+        ['modal-btn-ray-8', 'ray8'],
+        ['modal-btn-ray-vortex', 'rayVortex'],
+        ['modal-btn-ray-jump', 'rayJump'],
+        ['modal-btn-ray-kaleido', 'rayKaleido']
+      ];
+      rayToggles.forEach(([btnId, paramKey]) => {
+        document.getElementById(btnId).onclick = (e) => {
+          PARAMS[paramKey] = !PARAMS[paramKey];
+          e.target.classList.toggle('active', PARAMS[paramKey]);
+        };
+      });
+
+      // 6. MODAL DO INICIALIZADOR CENTRAL
+      const modalLauncher = document.getElementById('modal-launcher');
+      document.getElementById('nav-btn-launcher').onclick = () => modalLauncher.classList.remove('hidden');
+      document.getElementById('close-launcher').onclick = () => modalLauncher.classList.add('hidden');
+
+      // 7. BOTÕES DE ENTRADA AO VIVO COM TOGGLE REAL ON/OFF
+      document.getElementById('btn-mic').onclick = async () => {
+        if (currentStream && activeStreamType === 'mic') {
+          stopEverything(true);
+        } else {
+          await startStream('mic');
+        }
+      };
+      document.getElementById('btn-system').onclick = async () => {
+        if (currentStream && activeStreamType === 'system') {
+          stopEverything(true);
+        } else {
+          await startStream('system');
+        }
+      };
+
+      document.getElementById('btn-osc-mute').onclick = (e) => {
+        isOscillatorMuted = !isOscillatorMuted;
+        e.target.innerText = isOscillatorMuted ? "Som Tom: OFF" : "Som Tom: ON";
+        e.target.classList.toggle('bg-red-500/20', isOscillatorMuted);
+        e.target.classList.toggle('text-red-300', isOscillatorMuted);
+        if (isPresetActive || manualHz > 0) {
+          fadeInternalSound(isOscillatorMuted ? 0 : 0.12, 0.3);
+        }
+      };
+
+      // Botão Parar Geral
+      document.getElementById('nav-btn-stop').onclick = () => stopEverything(true);
+
+      // Câmera Topo / 3D
+      document.getElementById('nav-btn-view').onclick = () => { isTopView = !isTopView; updateCamera(); };
+      document.getElementById('toggle-view').onclick = () => { isTopView = !isTopView; updateCamera(); };
+
+      // Tela Cheia
+      document.getElementById('nav-btn-fullscreen').onclick = () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        }
+      };
+
+      // Músicas Locais
+      document.getElementById('audio-input').onchange = (e) => {
+        Array.from(e.target.files).forEach(f => playlist.push({ name: f.name, url: URL.createObjectURL(f) }));
+        renderPlaylist();
+        if (activeTrackIndex === -1 && playlist.length > 0) window.playTrack(0);
+      };
+      document.getElementById('btn-play-pause').onclick = () => {
+        if (currentAudioElement) {
+          currentAudioElement.paused ? currentAudioElement.play() : currentAudioElement.pause();
+          renderPlaylist();
+        } else if (playlist.length > 0) {
+          window.playTrack(0);
+        }
+      };
+
+      // Toggle Geral da UI
+      document.getElementById('btn-toggle-ui').onclick = () => {
+        uiVisible = !uiVisible;
+        document.getElementById('top-nav').classList.toggle('ui-hidden-top', !uiVisible);
+        document.getElementById('panel-freq').classList.toggle('ui-hidden-left', !uiVisible);
+        document.getElementById('panel-controls').classList.toggle('ui-hidden-right', !uiVisible);
+      };
+
+      // Modo Sessão
+      const startSession = () => {
+        isSessionActive = true;
+        document.getElementById('session-overlay').classList.add('active');
+        sessionStartTime = Date.now();
+        sessionTimerInterval = setInterval(() => {
+          const d = Math.floor((Date.now() - sessionStartTime) / 1000);
+          document.getElementById('session-timer').innerText =
+            `${Math.floor(d / 60).toString().padStart(2, '0')}:${(d % 60).toString().padStart(2, '0')}`;
+        }, 1000);
+      };
+      document.getElementById('btn-session').onclick = startSession;
+      document.getElementById('btn-session-drawer').onclick = startSession;
+      document.getElementById('btn-exit-session').onclick = () => {
+        isSessionActive = false;
+        document.getElementById('session-overlay').classList.remove('active');
+        clearInterval(sessionTimerInterval);
+      };
+
+      // AI DJ
+      document.getElementById('btn-ai-dj').onclick = (e) => {
+        PARAMS.aiDjActive = !PARAMS.aiDjActive;
+        e.target.classList.toggle('bg-blue-600', PARAMS.aiDjActive);
+        e.target.classList.toggle('text-white', PARAMS.aiDjActive);
+        if (PARAMS.aiDjActive) PARAMS.aiLastAction = time;
+      };
+    }
+
+    function updateAIDJ() {
+      if (!PARAMS.aiDjActive) return;
+      const now = time;
+      const peak = smoothedVolume > 1.8;
+      if (!peak && now - PARAMS.aiLastAction < 6.0) return;
+
+      PARAMS.aiLastAction = now;
+      const seed = Math.random();
+      PARAMS.rayKaleido = seed < 0.35;
+      PARAMS.rayHypno = seed >= 0.35 && seed < 0.65;
+      PARAMS.rayVortex = seed >= 0.65;
+      PARAMS.rayRotate = true;
+      PARAMS.rayRainbow = peak;
+      PARAMS.rayCount = peak ? 24 : 12;
+
+      document.getElementById('modal-input-rays').value = PARAMS.rayCount;
+      document.getElementById('modal-val-rays').innerText = PARAMS.rayCount;
+      updateRayLights();
+    }
+
+    function updateFluxParticles() {
+      if (!PARAMS.genFlux) return;
+      const positions = particleSystem.geometry.attributes.position.array;
+      const colors = particleSystem.geometry.attributes.color.array;
+      const color = new THREE.Color();
+      const v = Math.max(smoothedVolume, 0.25);
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const ix = i * 3, iy = i * 3 + 1, iz = i * 3 + 2;
+        positions[ix] += Math.sin(time + positions[iz] * 0.1) * 0.04 * v;
+        positions[iy] += Math.cos(time + positions[ix] * 0.1) * 0.04 * v;
+        positions[iz] += Math.sin(time + positions[iy] * 0.1) * 0.04 * v;
+        if (Math.abs(positions[ix]) > 22) positions[ix] *= -0.9;
+        if (positions[iy] < 0 || positions[iy] > 14) positions[iy] = Math.random() * 10;
+        if (Math.abs(positions[iz]) > 22) positions[iz] *= -0.9;
+        color.setHSL((currentHz / 1500 + i / PARTICLE_COUNT) % 1, 0.85, 0.55);
+        colors[ix] = color.r; colors[iy] = color.g; colors[iz] = color.b;
+      }
+      particleSystem.geometry.attributes.position.needsUpdate = true;
+      particleSystem.geometry.attributes.color.needsUpdate = true;
+    }
+
+    // ============================================================================
+    // LOOP PRINCIPAL DE RENDERIZAÇÃO E FÍSICA
+    // ============================================================================
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.015;
+
+      // 1. CAPTURA DE ÁUDIO COM RESPOSTA IMEDIATA
+      const mem = PARAMS.responseMemory;
+      if (isPresetActive) {
+        currentHz = currentHz * 0.85 + targetPresetHz * 0.15;
+        smoothedVolume = smoothedVolume * 0.85 + (PARAMS.gain / 25) * 0.15;
+      } else if (analyser && (currentAudioElement || currentStream)) {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0, maxVal = 0, maxIdx = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+          if (dataArray[i] > maxVal) {
+            maxVal = dataArray[i];
+            maxIdx = i;
+          }
+        }
+        let instantVol = (sum / dataArray.length) / 255;
+        if (instantVol > 0.003) {
+          smoothedVolume = smoothedVolume * mem + (instantVol * (PARAMS.gain * 0.85)) * (1 - mem);
+          let freq = maxIdx * (audioCtx.sampleRate / analyser.fftSize);
+          currentHz = currentHz * (mem * 0.8) + freq * (1 - mem * 0.8);
+        } else {
+          smoothedVolume *= (0.82 + mem * 0.15);
+          currentHz *= 0.92;
+        }
+      } else if (manualHz > 0) {
+        currentHz = manualHz;
+        smoothedVolume = PARAMS.gain / 25;
+      } else {
+        smoothedVolume *= 0.88;
+        currentHz *= 0.92;
+      }
+
+      // Se o volume residual cair muito baixo, colapsa para 0 (silêncio total)
+      if (smoothedVolume < 0.002) smoothedVolume = 0;
+
+      let effectiveHz = Math.max(currentHz, manualHz);
+      if (internalOscillator && audioCtx) {
+        internalOscillator.frequency.setTargetAtTime(Math.max(20, effectiveHz), audioCtx.currentTime, 0.05);
+      }
+
+      // Atualiza HUD
+      document.getElementById('hz-display').innerText = Math.round(effectiveHz);
+      const modeInfo = getChladniModeForHz(effectiveHz);
+      document.getElementById('pattern-name').innerText = effectiveHz > 5 ? modeInfo.name : "Em Repouso (Silêncio)";
+      document.getElementById('mode-mn').innerText = `(m=${modeInfo.m}, n=${modeInfo.n})`;
+      
+      const waterLbl = document.getElementById('water-state-lbl');
+      if (smoothedVolume > 0.01) {
+        waterLbl.innerText = "Em Vibração Ativa (" + Math.round(smoothedVolume * 100) + "%)";
+        waterLbl.className = "font-bold text-cyan-300";
+      } else {
+        waterLbl.innerText = "Em Repouso (Silêncio)";
+        waterLbl.className = "font-bold text-emerald-400";
+      }
+
+      updateAIDJ();
+      updateFluxParticles();
+      if (rayLights.length > 0) updateRayPositions();
+
+      // 2. ACABAMENTO SUPERFICIAL: ESPELHO NEGRO vs EMISSIVO
+      const mat = plateMesh.material;
+      if (PARAMS.mirrorMode && !PARAMS.proBloom) {
+        mat.color.setHex(activeMesa === 'chladni_sand' ? 0x050508 : 0x060609);
+        mat.metalness = activeMesa === 'chladni_sand' ? 0.75 : 0.96;
+        mat.roughness = activeMesa === 'chladni_sand' ? 0.35 : 0.14;
+        mat.emissive.setHex(0x000000);
+        mat.emissiveIntensity = 0;
+      } else {
+        mat.color.setHex(0x080812);
+        mat.emissive.setHSL((time * 0.1) % 1, 0.85, 0.35);
+        mat.emissiveIntensity = PARAMS.proBloom ? 1.4 : 0.35;
+      }
+
+      // 3. FÍSICA ESPECÍFICA DAS 3 MESAS
+      const pos = plateGeometry.attributes.position.array;
+      const gRes = res + 1;
+      const halfSize = PARAMS.size / 2;
+
+      if (activeMesa === 'chladni_sand') {
+        // ====================================================================
+        // MESA 2: PLACA DE CHLADNI COM 28.000 MICROGRÃOS DE AREIA
+        // ====================================================================
+        updateSandPhysics(Math.max(effectiveHz, 110), Math.max(smoothedVolume, isPresetActive || manualHz > 0 ? 0.8 : 0.0));
+
+        for (let i = 0; i < pos.length; i += 3) {
+          const x = originalPositions[i], z = originalPositions[i + 2];
+          const nx = x / halfSize, nz = z / halfSize;
+          const cVal = evalChladni(nx, nz, modeInfo.m, modeInfo.n, modeInfo.sign);
+          pos[i] = x;
+          pos[i + 2] = z;
+          pos[i + 1] = cVal * Math.sin(time * 25) * Math.min(smoothedVolume * 0.12, 0.25);
+        }
+
+      } else if (activeMesa === 'fusion_cymatic') {
+        // ====================================================================
+        // MESA 3: FUSÃO HÍBRIDA (CHLADNI ACOPLADO COM SOLVER DE ONDAS 2D)
+        // ====================================================================
+        const damping = 0.94 + PARAMS.responseMemory * 0.045;
+        const waveSpeed = 0.18;
+        const activeAmp = Math.min(smoothedVolume * 0.45, 1.8);
+
+        if (activeAmp > 0.002 && effectiveHz > 5) {
+          const osc = Math.sin(time * 14);
+          for (let y = 1; y < gRes - 1; y++) {
+            const nz = (y / res) * 2 - 1;
+            for (let x = 1; x < gRes - 1; x++) {
+              const nx = (x / res) * 2 - 1;
+              const idx = y * gRes + x;
+
+              const cVal = Math.abs(evalChladni(nx, nz, modeInfo.m, modeInfo.n, modeInfo.sign));
+              if (cVal < 0.085) {
+                const microStrength = (0.085 - cVal) / 0.085;
+                hField[idx] += osc * microStrength * activeAmp * 0.16;
+              }
+            }
+          }
+        }
+
+        // Propagação de onda discreta 2D
+        for (let y = 1; y < gRes - 1; y++) {
+          for (let x = 1; x < gRes - 1; x++) {
+            const idx = y * gRes + x;
+            const laplacian = (hField[idx - 1] + hField[idx + 1] + hField[idx - gRes] + hField[idx + gRes]) * 0.25 - hField[idx];
+            vField[idx] = (vField[idx] + laplacian * waveSpeed) * damping;
+          }
+        }
+        for (let idx = 0; idx < total; idx++) {
+          hField[idx] += vField[idx];
+          hField[idx] *= 0.985;
+        }
+
+        for (let i = 0; i < pos.length; i += 3) {
+          const x = originalPositions[i], z = originalPositions[i + 2];
+          const idx = i / 3;
+          pos[i] = x;
+          pos[i + 2] = z;
+          pos[i + 1] = hField[idx] * 3.2 * Math.min(1.0, smoothedVolume * 8.0);
+        }
+
+      } else {
+        // ====================================================================
+        // MESA 1: ÁGUA PURA — MATRIZ SAGRADA DE VIBRAÇÃO & PONTO CENTRAL ÚNICO
+        // ====================================================================
+        const f = (effectiveHz * 0.0032) + 1.15;
+        
+        // Resolve matriz sagrada ativa (manual ou ressonância com Atlas)
+        let resolvedMatrixKey = activeSacredMatrix;
+        if (activeSacredMatrix === 'auto_atlas') {
+          resolvedMatrixKey = modeInfo.sacred || 'ponto_central_1';
+        }
+        const matrix = SACRED_MATRICES[resolvedMatrixKey] || SACRED_MATRICES['ponto_central_1'];
+        const pts = matrix.points;
+        const isSingleCenter = (pts.length === 1 && pts[0].x === 0 && pts[0].z === 0);
+
+        for (let i = 0; i < pos.length; i += 3) {
+          const x = originalPositions[i], z = originalPositions[i + 2];
+          const r = Math.sqrt(x * x + z * z);
+          let wave = 0;
+
+          if (isSingleCenter) {
+            // Foco Central Único: Onda concêntrica pura com envelope de Faraday
+            const radialEnvelope = Math.exp(-r * 0.065);
+            wave = Math.sin(f * r - time * 6.5) * Math.cos(f * x * 0.65) * Math.cos(f * z * 0.65) * radialEnvelope;
+          } else {
+            // Matriz Sagrada Multi-Nodal: Interferência exata dos cruzamentos geométricos
+            let sum = 0, weightSum = 0;
+            for (let p = 0; p < pts.length; p++) {
+              const pt = pts[p];
+              const px = pt.x * halfSize, pz = pt.z * halfSize;
+              const dx = x - px, dz = z - pz;
+              const d = Math.sqrt(dx * dx + dz * dz);
+              const env = Math.exp(-d * 0.11);
+              sum += Math.sin(f * d - time * 6.5 + pt.phase) * pt.weight * env;
+              weightSum += pt.weight;
+            }
+            wave = (sum / (weightSum || 1)) * 1.5;
+          }
+
+          if (PARAMS.physFluid) {
+            pos[i] = x + Math.sin(time * 0.6 + r) * 0.12 * (smoothedVolume * 0.2);
+            pos[i + 2] = z + Math.cos(time * 0.6 + r) * 0.12 * (smoothedVolume * 0.2);
+          } else {
+            pos[i] = x;
+            pos[i + 2] = z;
+          }
+
+          if (PARAMS.physMulti) {
+            lights.forEach(l => {
+              let dx = x - l.light.position.x, dz = z - l.light.position.z;
+              let dist = Math.sqrt(dx * dx + dz * dz);
+              wave += Math.sin(f * dist - time * 4) * (l.rawIntensity / 500);
+            });
+          }
+
+          // Silêncio: a água fica plana se não houver som
+          pos[i + 1] = wave * (smoothedVolume * 1.45);
+        }
+      }
+
+      plateGeometry.attributes.position.needsUpdate = true;
+      plateGeometry.computeVertexNormals();
+      renderer.render(scene, camera);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
+'''
+
+# Escreve nos dois destinos: index.html e cymatics_studio_master.html
+dest1 = r"C:\Users\Pc\Downloads\Cimatic\index.html"
+dest2 = r"C:\Users\Pc\Downloads\Cimatic\cymatics_studio_master.html"
+
+with open(dest1, "w", encoding="utf-8") as f:
+    f.write(html_content)
+print(f"Salvo index.html: {len(html_content)} bytes.")
+
+with open(dest2, "w", encoding="utf-8") as f:
+    f.write(html_content)
+print(f"Salvo cymatics_studio_master.html: {len(html_content)} bytes.")
+print("=== CONSTRUÇÃO FINALIZADA COM SUCESSO! ===")
