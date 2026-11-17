@@ -8,6 +8,7 @@
   <!-- Dependências: Three.js r128, OrbitControls e Tailwind CSS via CDN confiável -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
@@ -360,6 +361,12 @@
     <div class="flex items-center gap-2 min-w-[220px] justify-end">
       <!-- Alternar Câmera Topo / 3D -->
       <!-- Botão Inicializador Central de Apps -->
+      <!-- Botão Projeção Holográfica 3D (Blender) -->
+      <button id="btn-toggle-hologram" class="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors shadow-sm" onclick="cycleSacredHologram()" title="Alternar Projeção Holográfica 3D">
+        <span>🔯</span>
+        <span id="lbl-hologram-btn">Holograma: Off</span>
+      </button>
+
       <button id="btn-open-launcher" class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors shadow-sm" onclick="openLauncherModal()" title="Inicializador de Aplicativos">
         <span>🚀</span>
         <span>Inicializador</span>
@@ -897,6 +904,9 @@
       generativeFlux: false,
       lightsAsExciters: false,
       isSessionActive: false,
+      sacredHologramMode: 'off', // 'off' | 'merkabah' | 'icosahedron'
+      dyadRatio: 0, // 0 = uníssono, 1.5 = 3:2 quinta, 1.25 = 5:4 3ª maior, etc.
+      activeTrono: null,
       activePresetFilter: 'todos'
     };
 
@@ -1291,6 +1301,9 @@
       oscillatorGain: null,
       isOscillatorActive: false,
       oscillatorHz: 432,
+      dyadOscNode: null,
+      dyadGainNode: null,
+      dyadRatio: 0,
 
       // Estado de Análise
       fftDominantHz: 0,
@@ -1521,7 +1534,48 @@
         }
       },
 
+            setDyadRatio(ratio) {
+        this.dyadRatio = ratio;
+        if (!this.ctx) return;
+        if (ratio <= 0) {
+          if (this.dyadGainNode) {
+            const now = this.ctx.currentTime;
+            this.dyadGainNode.gain.cancelScheduledValues(now);
+            this.dyadGainNode.gain.setValueAtTime(this.dyadGainNode.gain.value, now);
+            this.dyadGainNode.gain.linearRampToValueAtTime(0, now + 0.15);
+          }
+          return;
+        }
+
+        if (!this.dyadOscNode) {
+          this.dyadOscNode = this.ctx.createOscillator();
+          this.dyadOscNode.type = 'sine';
+          this.dyadGainNode = this.ctx.createGain();
+          this.dyadGainNode.gain.setValueAtTime(0, this.ctx.currentTime);
+
+          this.dyadOscNode.connect(this.dyadGainNode);
+          this.dyadGainNode.connect(this.lowPassFilter);
+          this.dyadGainNode.connect(this.playbackGain);
+          try { this.analyser.connect(this.playbackGain); } catch (e) {}
+
+          this.dyadOscNode.start();
+        }
+
+        const now = this.ctx.currentTime;
+        const targetHz = Math.max(20, Math.min(2400, this.oscillatorHz * ratio));
+        this.dyadOscNode.frequency.cancelScheduledValues(now);
+        this.dyadOscNode.frequency.setValueAtTime(this.dyadOscNode.frequency.value, now);
+        this.dyadOscNode.frequency.linearRampToValueAtTime(targetHz, now + 0.05);
+
+        this.dyadGainNode.gain.cancelScheduledValues(now);
+        this.dyadGainNode.gain.setValueAtTime(this.dyadGainNode.gain.value, now);
+        this.dyadGainNode.gain.linearRampToValueAtTime(0.35, now + 0.15);
+      },
       setOscillatorFrequency(freq, duration = 0.05) {
+        if (this.dyadOscNode && this.dyadRatio > 0) {
+          const dyadHz = Math.max(20, Math.min(2400, freq * this.dyadRatio));
+          this.dyadOscNode.frequency.linearRampToValueAtTime(dyadHz, this.ctx.currentTime + duration);
+        }
         this.oscillatorHz = freq;
         if (this.oscillatorNode && this.ctx) {
           const now = this.ctx.currentTime;
@@ -1644,6 +1698,13 @@
     // --- VARIÁVEIS DO PALCO THREE.JS ---
     let scene, camera, renderer, controls;
     let baseMesh, baseGeometry, baseMaterial;
+        // --- ATIVOS BLENDER 3D & PROJEÇÃO SAGRADA ---
+    let cymascopeBasinMesh = null;
+    let sacredHologramGroup = new THREE.Group();
+    let merkabahMesh = null;
+    let icosahedronMesh = null;
+    let gltfLoader = null;
+
     let originalPositions = [];
     // --- MOTOR FÍSICO DE ÁGUA MESOTÓPICA (CIMATICAGUAFLUIDA.HTML) ---
     const fluidRes = 160;
@@ -1774,6 +1835,41 @@
       baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
       baseMesh.receiveShadow = false;
       scene.add(baseMesh);
+
+      // Configura grupo de holograma sagrado suspenso acima da lâmina líquida
+      scene.add(sacredHologramGroup);
+      sacredHologramGroup.position.set(0, 3.6, 0);
+      sacredHologramGroup.visible = false;
+
+      // Carrega os Ativos 3D exportados pelo Blender 5.3
+      if (typeof THREE.GLTFLoader !== 'undefined') {
+        gltfLoader = new THREE.GLTFLoader();
+
+        // 1. Cubeta Metálica Física do CymaScope (Titânio Escovado)
+        gltfLoader.load('assets/cymascope_basin.glb', (gltf) => {
+          cymascopeBasinMesh = gltf.scene;
+          cymascopeBasinMesh.position.set(0, 0, 0);
+          scene.add(cymascopeBasinMesh);
+          console.log("CymaScope Basin carregado com sucesso do Blender!");
+        }, undefined, (err) => console.log("Basin fallback:", err));
+
+        // 2. Merkabah & Holograma Triplo Concorrente
+        gltfLoader.load('assets/merkabah_hologram.glb', (gltf) => {
+          merkabahMesh = gltf.scene;
+          merkabahMesh.visible = false;
+          sacredHologramGroup.add(merkabahMesh);
+          console.log("Merkabah Hologram carregado com sucesso do Blender!");
+        }, undefined, (err) => console.log("Merkabah fallback:", err));
+
+        // 3. Icosaedro Sagrado (Elemento Água)
+        gltfLoader.load('assets/platonic_icosahedron.glb', (gltf) => {
+          icosahedronMesh = gltf.scene;
+          icosahedronMesh.visible = false;
+          sacredHologramGroup.add(icosahedronMesh);
+          console.log("Icosaedro Sagrado carregado com sucesso do Blender!");
+        }, undefined, (err) => console.log("Icosahedron fallback:", err));
+      }
+
 
       // 5.2 Sistema de Microgrãos de Areia de Chladni (Mesa 2 - 25.000 partículas)
       sandGeometry = new THREE.BufferGeometry();
@@ -2968,6 +3064,32 @@
 
       controls.update();
 
+      // Animação da Projeção Holográfica 3D (Blender)
+      if (sacredHologramGroup && sacredHologramGroup.visible) {
+        sacredHologramGroup.rotation.y += 0.006;
+        
+        if (merkabahMesh && merkabahMesh.visible) {
+          // Rotação contrarrotacional dos tetraedros e anéis
+          merkabahMesh.children.forEach(child => {
+            if (child.name && child.name.includes('Sun')) child.rotation.y -= 0.018;
+            else if (child.name && child.name.includes('Earth')) child.rotation.y += 0.018;
+            else if (child.name && child.name.includes('Gold')) child.rotation.z += 0.012;
+            else if (child.name && child.name.includes('Silver')) child.rotation.x -= 0.012;
+          });
+        }
+
+        if (icosahedronMesh && icosahedronMesh.visible) {
+          icosahedronMesh.rotation.x += 0.008;
+          icosahedronMesh.rotation.y += 0.012;
+        }
+
+        const volScale = 1.0 + (audioState.volume * 0.40);
+        const peakBump = audioState.energyPeak ? 1.15 : 1.0;
+        const targetScale = volScale * peakBump;
+        sacredHologramGroup.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
+      }
+
+
       // Deformação da Malha 3D pelo Motor Acústico
       const pos = baseGeometry.attributes.position.array;
       const count = pos.length / 3;
@@ -3170,6 +3292,106 @@
     }
 
     // --- CONTROLE DO INICIALIZADOR CENTRAL DE APLICATIVOS ---
+        // --- CONTROLE DE HOLOGRAMA SAGRADO 3D (BLENDER) ---
+    function setSacredHologram(mode) {
+      STUDIO_STATE.sacredHologramMode = mode;
+      const lbl = document.getElementById('lbl-hologram-btn');
+      
+      if (mode === 'off') {
+        sacredHologramGroup.visible = false;
+        if (merkabahMesh) merkabahMesh.visible = false;
+        if (icosahedronMesh) icosahedronMesh.visible = false;
+        if (lbl) lbl.innerText = "Holograma: Off";
+        document.getElementById('btn-toggle-hologram')?.classList.remove('border-amber-400', 'bg-amber-500/30');
+      } else if (mode === 'merkabah') {
+        sacredHologramGroup.visible = true;
+        if (merkabahMesh) merkabahMesh.visible = true;
+        if (icosahedronMesh) icosahedronMesh.visible = false;
+        if (lbl) lbl.innerText = "Holograma: Merkabah";
+        document.getElementById('btn-toggle-hologram')?.classList.add('border-amber-400', 'bg-amber-500/30');
+      } else if (mode === 'icosahedron') {
+        sacredHologramGroup.visible = true;
+        if (merkabahMesh) merkabahMesh.visible = false;
+        if (icosahedronMesh) icosahedronMesh.visible = true;
+        if (lbl) lbl.innerText = "Holograma: Icosaedro";
+        document.getElementById('btn-toggle-hologram')?.classList.add('border-amber-400', 'bg-amber-500/30');
+      }
+
+      // Atualiza botões no painel
+      document.querySelectorAll('.btn-holo-mode').forEach(b => {
+        b.classList.toggle('border-amber-400', b.getAttribute('data-mode') === mode);
+        b.classList.toggle('text-amber-300', b.getAttribute('data-mode') === mode);
+      });
+    }
+
+    function cycleSacredHologram() {
+      const modes = ['off', 'merkabah', 'icosahedron'];
+      const curIdx = modes.indexOf(STUDIO_STATE.sacredHologramMode);
+      const nextMode = modes[(curIdx + 1) % modes.length];
+      setSacredHologram(nextMode);
+    }
+
+    // --- CONTROLE DE DÍADES PITAGÓRICAS (RAZÕES HARMÔNICAS) ---
+    function selectDyadInterval(ratio, btn) {
+      STUDIO_STATE.dyadRatio = ratio;
+      AudioEngine.setDyadRatio(ratio);
+      
+      document.querySelectorAll('.btn-dyad').forEach(b => {
+        b.classList.remove('border-cyan-400', 'bg-cyan-500/20', 'text-cyan-300');
+      });
+      if (btn) {
+        btn.classList.add('border-cyan-400', 'bg-cyan-500/20', 'text-cyan-300');
+      }
+      
+      const badge = document.getElementById('hud-dyad-badge');
+      if (badge) {
+        if (ratio === 0) badge.innerText = "Díade: Off";
+        else if (ratio === 1.5) badge.innerText = "Díade: 3:2 Quinta";
+        else if (ratio === 1.25) badge.innerText = "Díade: 5:4 Terça M";
+        else if (ratio === 1.333) badge.innerText = "Díade: 4:3 Quarta";
+        else if (ratio === 2.0) badge.innerText = "Díade: 2:1 Oitava";
+        else if (ratio === 1.618) badge.innerText = "Díade: Φ Áurea";
+      }
+    }
+
+    // --- PALETAS DOS TRONOS SAGRADOS (MAPA DOS TRONOS) ---
+    const TRONOS_PALETTES = {
+      fe: { name: "Fé", c1: 0xffffff, c2: 0x0033aa, visc: 0.985 },
+      amor: { name: "Amor", c1: 0x00bfff, c2: 0xff69b4, visc: 0.975 },
+      conhecimento: { name: "Conhecimento", c1: 0x00ff88, c2: 0xff0088, visc: 0.980 },
+      justica: { name: "Justiça", c1: 0xff2200, c2: 0xff8800, visc: 0.960 },
+      lei: { name: "Lei", c1: 0x001188, c2: 0xffdd00, visc: 0.970 },
+      evolucao: { name: "Evolução", c1: 0x8800ff, c2: 0xda70d6, visc: 0.990 },
+      geracao: { name: "Geração", c1: 0x4b0082, c2: 0x00ffff, visc: 0.985 }
+    };
+
+    function applyTronoPalette(key, btn) {
+      const trono = TRONOS_PALETTES[key];
+      if (!trono) return;
+      STUDIO_STATE.activeTrono = key;
+      STUDIO_STATE.viscosity = trono.visc;
+      document.getElementById('lbl-physics-visc').innerText = trono.visc.toFixed(3);
+      document.getElementById('slider-physics-visc').value = trono.visc;
+
+      // Atualiza cores dos moving heads / luzes personalizadas
+      if (customLights.length >= 2) {
+        customLights[0].light.color.setHex(trono.c1);
+        customLights[0].gizmo.material.color.setHex(trono.c1);
+        customLights[1].light.color.setHex(trono.c2);
+        customLights[1].gizmo.material.color.setHex(trono.c2);
+      }
+
+      // Atualiza visual dos botões de tronos
+      document.querySelectorAll('.btn-trono').forEach(b => {
+        b.classList.remove('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
+      });
+      if (btn) {
+        btn.classList.add('border-amber-400', 'bg-amber-500/20', 'text-amber-300');
+      }
+
+      updateHUDSourceBadge(`Trono: ${trono.name}`, true);
+    }
+
     window.openLauncherModal = function() {
       const modal = document.getElementById('modal-launcher');
       if (modal) modal.classList.remove('hidden');
