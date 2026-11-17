@@ -557,13 +557,33 @@
           
           <!-- BOTÕES DE ENTRADA AO VIVO COM TOGGLE REAL ON/OFF -->
           <div class="grid grid-cols-2 gap-1.5">
-            <button id="btn-mic" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1">
+            <button id="btn-mic" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1 transition-all">
               <span>🎤</span> <span id="lbl-mic">Microfone: OFF</span>
             </button>
-            <button id="btn-system" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1">
+            <button id="btn-system" class="py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[8px] font-bold uppercase border border-white/10 flex items-center justify-center gap-1 transition-all">
               <span>💻</span> <span id="lbl-sys">Sistema: OFF</span>
             </button>
           </div>
+
+          <!-- VU METER & SENSIBILIDADE DO MICROFONE EM TEMPO REAL -->
+          <div class="p-2.5 bg-black/50 rounded-xl border border-white/10 space-y-1.5 shadow-inner">
+            <div class="flex justify-between items-center text-[7.5px]">
+              <span class="text-gray-300 font-bold uppercase tracking-wider flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                Nível de Captação (VU):
+              </span>
+              <span id="mic-vu-text" class="text-cyan-400 font-mono font-bold text-[9px]">0%</span>
+            </div>
+            <div class="h-2 w-full bg-white/10 rounded-full overflow-hidden p-0.5 border border-white/5">
+              <div id="mic-vu-bar" class="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 rounded-full transition-all duration-75 shadow-[0_0_8px_rgba(6,182,212,0.6)]" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between items-center text-[7.5px] pt-1">
+              <span class="text-gray-400 font-bold uppercase">Ganho / Sensibilidade Mic:</span>
+              <span id="val-mic-gain" class="text-cyan-300 font-mono font-bold">2.5x</span>
+            </div>
+            <input type="range" id="slider-mic-gain" min="0.5" max="6.0" step="0.1" value="2.5" class="w-full">
+          </div>
+
           <div class="pt-1 flex justify-between items-center text-[8px]">
             <span class="text-gray-400 font-bold uppercase">Filtro Subgrave (LowPass):</span>
             <button id="btn-pro-filter" class="toggle-btn px-2.5 py-0.5">Ativar</button>
@@ -944,6 +964,8 @@
     let audioCtx, analyser, gainNode, sourceNode, lowPass;
     let dataArray;
     let currentStream = null;
+    let streamGainNode = null;
+    let micGainMultiplier = 2.5;
     let activeStreamType = null; // 'mic' | 'system' | null
     let currentAudioElement = null;
     let smoothedVolume = 0;
@@ -1693,39 +1715,65 @@
       internalGain.gain.linearRampToValueAtTime(effectiveVol, audioCtx.currentTime + duration);
     }
 
-    // LIGA / DESLIGA STREAM (MICROFONE OU SISTEMA)
+    // LIGA / DESLIGA STREAM (MICROFONE OU SISTEMA) COM ALTA SENSIBILIDADE
     async function startStream(type) {
       await initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
       isPresetActive = false;
+      manualHz = 0;
       document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
       fadeInternalSound(0, 0.3);
       stopEverything(false);
 
       try {
-        const stream = type === 'mic'
-          ? await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } })
-          : await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        let stream;
+        if (type === 'mic') {
+          try {
+            // Prioriza áudio cristalino com autoGainControl ativo para captar voz e sons distantes
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: true
+              }
+            });
+          } catch (errConstraints) {
+            console.warn("Tentando fallback de microfone simples:", errConstraints);
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          }
+        } else {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        }
 
         sourceNode = audioCtx.createMediaStreamSource(stream);
+        
+        // Cria nó dedicado de ganho para amplificação da sensibilidade de entrada
+        streamGainNode = audioCtx.createGain();
+        streamGainNode.gain.setValueAtTime(type === 'mic' ? micGainMultiplier : 1.0, audioCtx.currentTime);
+        sourceNode.connect(streamGainNode);
+
         if (PARAMS.proFilter) {
-          sourceNode.connect(lowPass);
+          streamGainNode.connect(lowPass);
           lowPass.connect(analyser);
         } else {
-          sourceNode.connect(analyser);
+          streamGainNode.connect(analyser);
         }
 
         currentStream = stream;
         activeStreamType = type;
 
         if (type === 'mic') {
-          document.getElementById('btn-mic').classList.add('bg-blue-600', 'text-white');
+          document.getElementById('btn-mic').classList.add('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
           document.getElementById('lbl-mic').innerText = "Microfone: ON";
         } else {
-          document.getElementById('btn-system').classList.add('bg-blue-600', 'text-white');
+          document.getElementById('btn-system').classList.add('bg-blue-600', 'text-white', 'shadow-[0_0_15px_rgba(37,99,235,0.8)]');
           document.getElementById('lbl-sys').innerText = "Sistema: ON";
         }
       } catch (err) {
         console.error("Erro ao ativar stream de áudio:", err);
+        alert("Não foi possível acessar a entrada de áudio. Verifique se o microfone está conectado e se o navegador tem permissão.");
         stopEverything(true);
       }
     }
@@ -1799,9 +1847,20 @@
         currentAudioElement.pause();
         currentAudioElement = null;
       }
+      if (streamGainNode) {
+        try { streamGainNode.disconnect(); } catch (e) {}
+        streamGainNode = null;
+      }
       if (sourceNode) {
         try { sourceNode.disconnect(); } catch (e) {}
         sourceNode = null;
+      }
+
+      const vuBar = document.getElementById('mic-vu-bar');
+      const vuText = document.getElementById('mic-vu-text');
+      if (vuBar && vuText) {
+        vuBar.style.width = '0%';
+        vuText.innerText = '0%';
       }
 
       smoothedVolume = 0;
@@ -1999,6 +2058,17 @@
           fadeInternalSound(0, 0.4);
         }
       };
+
+            const sliderMicGain = document.getElementById('slider-mic-gain');
+      if (sliderMicGain) {
+        sliderMicGain.oninput = (e) => {
+          micGainMultiplier = parseFloat(e.target.value);
+          document.getElementById('val-mic-gain').innerText = micGainMultiplier.toFixed(1) + 'x';
+          if (streamGainNode && activeStreamType === 'mic') {
+            streamGainNode.gain.setValueAtTime(micGainMultiplier, audioCtx.currentTime);
+          }
+        };
+      }
 
       document.getElementById('input-gain').oninput = (e) => {
         PARAMS.gain = parseFloat(e.target.value);
@@ -2247,23 +2317,69 @@
         currentHz = currentHz * 0.85 + targetPresetHz * 0.15;
         smoothedVolume = smoothedVolume * 0.85 + (PARAMS.gain / 25) * 0.15;
       } else if (analyser && (currentAudioElement || currentStream)) {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
         analyser.getByteFrequencyData(dataArray);
-        let sum = 0, maxVal = 0, maxIdx = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-          if (dataArray[i] > maxVal) {
-            maxVal = dataArray[i];
-            maxIdx = i;
+
+        const binWidth = audioCtx.sampleRate / analyser.fftSize; // ~23.44 Hz
+        // Ignora DC offset / zumbido elétrico abaixo de 55 Hz (bins 0 a 2)
+        const minBin = Math.max(2, Math.floor(55 / binWidth));
+        // Limita a busca harmônica até 3200 Hz onde reside a energia vocal e musical
+        const maxBin = Math.min(dataArray.length - 1, Math.floor(3200 / binWidth));
+
+        let peakVal = 0;
+        let peakIdx = minBin;
+        let bandEnergy = 0;
+        let count = 0;
+
+        for (let i = minBin; i <= maxBin; i++) {
+          const val = dataArray[i];
+          bandEnergy += val * val;
+          count++;
+          if (val > peakVal) {
+            peakVal = val;
+            peakIdx = i;
           }
         }
-        let instantVol = (sum / dataArray.length) / 255;
-        if (instantVol > 0.003) {
-          smoothedVolume = smoothedVolume * mem + (instantVol * (PARAMS.gain * 0.85)) * (1 - mem);
-          let freq = maxIdx * (audioCtx.sampleRate / analyser.fftSize);
-          currentHz = currentHz * (mem * 0.8) + freq * (1 - mem * 0.8);
+
+        // RMS real da banda audível (0.0 a 1.0)
+        const rms = Math.sqrt(bandEnergy / Math.max(1, count)) / 255.0;
+
+        // Atualização contínua do VU Meter no painel lateral
+        const vuBar = document.getElementById('mic-vu-bar');
+        const vuText = document.getElementById('mic-vu-text');
+        if (vuBar && vuText) {
+          const pct = Math.min(100, Math.round(rms * 280));
+          vuBar.style.width = pct + '%';
+          vuText.innerText = pct + '%';
+        }
+
+        // Sensibilidade responsiva: qualquer som (voz normal, assobios, batidas, música)
+        if (rms > 0.010 && peakVal > 14) {
+          // Interpolação parabólica para encontrar a frequência harmônica fundamental contínua
+          let fineIdx = peakIdx;
+          if (peakIdx > minBin && peakIdx < maxBin) {
+            const y1 = dataArray[peakIdx - 1];
+            const y2 = dataArray[peakIdx];
+            const y3 = dataArray[peakIdx + 1];
+            const denom = y1 - 2 * y2 + y3;
+            if (Math.abs(denom) > 1e-4) {
+              const delta = 0.5 * (y1 - y3) / denom;
+              fineIdx = peakIdx + delta;
+            }
+          }
+
+          const rawHz = fineIdx * binWidth;
+          const targetVol = Math.min(1.8, rms * (PARAMS.gain / 8.0));
+          smoothedVolume = smoothedVolume * mem + targetVol * (1 - mem);
+
+          if (rawHz >= 50 && rawHz <= 3500) {
+            currentHz = currentHz * (mem * 0.6) + rawHz * (1 - mem * 0.6);
+          }
         } else {
-          smoothedVolume *= (0.82 + mem * 0.15);
-          currentHz *= 0.92;
+          smoothedVolume *= (0.82 + mem * 0.12);
+          currentHz *= 0.94;
         }
       } else if (manualHz > 0) {
         currentHz = manualHz;
